@@ -17,8 +17,12 @@ int main(int argc, const char* argv[]) {
 	while (game.running()) {
 		frameStart = SDL_GetTicks();//for capping frame rate below
 		game.handleEvents(); 
-		game.update();
+		int speed = 5; //controls how many updates before a new frame is rendered. Useful for speeding up time/debugging
+		for (int i = 0; i < speed; i++) {
+			game.update();
+		}
 		game.render();
+		cout << "frame" << endl;
 		//caps the frame rate		might need to implement this differently (or remove it?) as it might also slow down background calculations, idk
 		frameTime = SDL_GetTicks() - frameStart;
 		if (frameDelay > frameTime) {

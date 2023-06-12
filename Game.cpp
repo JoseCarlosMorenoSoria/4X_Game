@@ -1,6 +1,10 @@
 #include "Game.hpp"
 
 using namespace std; //Note: Loops are expensive??, therefore try to eliminate loops or reduce their size (for or while, etc)
+//one way to maybe find optimizations/inefficiencies/repetition is to use 2 letter variables only for a function while analyzing, and keep long variable names only in committed code
+//for each loops are more legible? use those whenever possible?
+//should memory footprint be reduced by instead of storing and passing pointers, store and pass id?
+//a lot of cases should be eliminated by ensuring they don't occur in the first place, such as searching for an organism id that doesn't exist, searching an out of bounds tile, etc.
 
 Game::Game() {
 	isRunning = false;
@@ -63,9 +67,13 @@ void Game::update() {
 	else { daytime = 0; }
 	//cout << daytime << endl;
 
-	for (int i = 0; i < biology.organisms.size(); i++) {//all humans move to position 15,15
-		if (biology.organisms[i].species.species_name == "human") {
-			biology.update(&biology.organisms[i]);
+	for (int i = 0; i < sizeof(biology.organisms)/sizeof(vector<Biology::Organism>); i++) {
+		//iterates in reverse order in case an element is deleted, to avoid skipping over an element. See: https://stackoverflow.com/a/63598736/22054183
+		for (int j = biology.organisms[i].size() - 1; j > -1; j--) {
+			string tmpString = biology.organisms[i][j].species.species_name;
+			if (tmpString == "berrybush" || tmpString == "human") {
+				biology.update(&biology.organisms[i][j]);
+			}
 		}
 	}
 	
@@ -93,30 +101,17 @@ void Game::render() {//to do: recieves absolute position data from world and tra
 		destR.y = r * 32;
 		for (int c = 0;c < environment.columns;c++) {
 			destR.x = c * 32;
-			string tile_png = "";
-			switch (environment.map[r][c])
-			{
-			case 0:
-				tile_png = "pics/dirt.png";//these can be moved out of this file by have tile structs with the position and png instead of an array of ints in map
-				break;
-			case 1:
-				tile_png = "pics/water.png";
-				break;
-			case 2:
-				tile_png = "pics/stone.png";
-				break;
-			default:
-				break;
-			}
-			textureManager(tile_png, destR);
+			textureManager(environment.map[r][c].terrain_png, destR);
 		}
 	}
 
 	//render all organisms in the list, their x and y position are tile positions and so must be adjusted to screen location(x*32)
-	for (int i = 0; i < biology.organisms.size(); i++) {
-		destR.x = biology.organisms[i].position.x*32;
-		destR.y = biology.organisms[i].position.y*32;
-		textureManager(biology.organisms[i].species.png_file, destR);
+	for (int i = 0; i < sizeof(biology.organisms)/sizeof(vector<Biology::Organism>); i++) {
+		for (int j = 0; j < biology.organisms[i].size(); j++) {
+			destR.x = biology.organisms[i][j].position.x * 32;
+			destR.y = biology.organisms[i][j].position.y * 32;
+			textureManager(biology.organisms[i][j].species.png_file, destR);
+		}
 	}
 	
 	

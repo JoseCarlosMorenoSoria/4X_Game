@@ -1,5 +1,4 @@
 #include "Biology.hpp"
-
 using namespace std;
 
 Biology::Biology(){}
@@ -9,18 +8,35 @@ Biology::Biology(Environment* env) {
 	environment = env;
 
 	//instantiate organisms
-
-	//grass and the like first
+	Organism tmpOrganism;
+	Position tmpPosition;
 	for (int i = 0; i < 20; i++) {
 		for (int j = 0; j < 40; j++) {
-			organisms.push_back({new_id(), Biology::grass, j, i});
+			tmpOrganism = { new_id(), /*grass*/species_presets[2], j, i };
+			organisms[2].push_back(tmpOrganism);
 		}
 	}
 
-	for(int i=0;i<3;i++){organisms.push_back({new_id(), Biology::human,{rand()%Environment::columns, rand()%Environment::rows}}); }
-	for(int i=0;i<3;i++){organisms.push_back({new_id(), Biology::deer,{rand()%Environment::columns, rand()%Environment::rows}});}
-	for(int i=0;i<15;i++){organisms.push_back({new_id(), Biology::tree,{rand()%Environment::columns, rand()%Environment::rows}});}
-	for(int i=0;i<30;i++){organisms.push_back({new_id(), Biology::berrybush,{rand()%Environment::columns, rand()%Environment::rows}});}
+	for(int i=0;i<4;i++){
+		tmpPosition = { rand() % Environment::columns, rand() % Environment::rows };
+		tmpOrganism = { new_id(), /*human*/species_presets[5],tmpPosition, (bool)(i % 2)/*ensures a 50/50 sex ratio*/ };
+		environment->tie_to_tile(tmpOrganism.id, tmpOrganism.position.x, tmpOrganism.position.y);
+		organisms[5].push_back(tmpOrganism); }
+	for(int i=0;i<3;i++){
+		tmpPosition = { rand() % Environment::columns, rand() % Environment::rows };
+		tmpOrganism = { new_id(), /*deer*/species_presets[1],tmpPosition };
+		environment->tie_to_tile(tmpOrganism.id, tmpOrganism.position.x, tmpOrganism.position.y);
+		organisms[1].push_back(tmpOrganism); }
+	for(int i=0;i<15;i++){
+		tmpPosition = { rand() % Environment::columns, rand() % Environment::rows };
+		tmpOrganism = { new_id(), /*tree*/species_presets[3],tmpPosition };
+		environment->tie_to_tile(tmpOrganism.id, tmpOrganism.position.x, tmpOrganism.position.y);
+		organisms[3].push_back(tmpOrganism); }
+	for(int i=0;i<30;i++){
+		tmpPosition = { rand() % Environment::columns, rand() % Environment::rows };
+		tmpOrganism = { new_id(), /*berrybush*/species_presets[4],tmpPosition };
+		environment->tie_to_tile(tmpOrganism.id, tmpOrganism.position.x, tmpOrganism.position.y);
+		organisms[4].push_back(tmpOrganism); }
 }
 
 Biology::~Biology() {
@@ -53,6 +69,8 @@ bool Biology::move_to(Organism* o, Position p) {//needed to use pointers, theref
 	//int result = o->position.x - p.x; // gets difference in positions
 	//o->position.x += (result/result); // result/result equals either 1 or -1, add it to move 1 step closer to target
 
+	environment->untie_from_tile(o->id, o->position.x, o->position.y);
+
 	if (o->position.x > p.x) { o->position.x--; }//once collisions are implemented, will need to add behavior for going around impassable objects
 	else if (o->position.x < p.x) { o->position.x++; }
 	if (o->position.y > p.y) { o->position.y--; }
@@ -63,48 +81,107 @@ bool Biology::move_to(Organism* o, Position p) {//needed to use pointers, theref
 	if (o->position.y < 0) { o->position.y = 0; }
 	else if (o->position.y > Environment::rows - 1) { o->position.y = Environment::rows - 1; }
 
+	environment->tie_to_tile(o->id, o->position.x, o->position.y);
+
 	if (o->position.x == p.x && o->position.y == p.y) { return true; }
 	return false;
 }
 
 
-Biology::Organism* Biology::search_for_species(Organism* o, string species) {
-	for (int i = 0; i < Biology::organisms.size();i++) { //it's not the nearest, just the first match within range
-		if (Biology::organisms[i].species.species_name == species && abs(Biology::organisms[i].position.y - o->position.y) < 5 && abs(Biology::organisms[i].position.x - o->position.x) < 5)//true if found match within 5 tiles
-		{
-			return &Biology::organisms[i];
+vector<Biology::Organism*> Biology::get_nearby_organisms(Organism* o, int radius, string species) {
+	if (species == "all") {
+		vector<Organism*> nearby_organisms;
+		vector<Organism*> tmp_nearby_organisms;
+		for (int i = 0; i < sizeof(species_presets)/sizeof(Species); i++) {//get all nearby organisms, all species
+			tmp_nearby_organisms = get_nearby_organisms(o, radius, species_presets[i].species_name);
+			if (tmp_nearby_organisms.size() == 0) { continue; }
+			if (nearby_organisms.size() == 0) { nearby_organisms = tmp_nearby_organisms; }
+			else if (nearby_organisms.size() >= tmp_nearby_organisms.size()) {
+				nearby_organisms.insert(nearby_organisms.end(), tmp_nearby_organisms.begin(), tmp_nearby_organisms.end());//append tmp_nearby to nearby. Done this way (append to larger vector) to reduce amount of copying when appending.
+			}
+			else {
+				tmp_nearby_organisms.insert(tmp_nearby_organisms.end(), nearby_organisms.begin(), nearby_organisms.end());//append nearby to tmp_nearby
+				nearby_organisms = tmp_nearby_organisms;
+			}
+		}
+		return nearby_organisms;
+	}
+
+	vector<Organism*> found;
+	int min_y = o->position.y - radius;
+	int max_y = o->position.y + radius;
+	int min_x = o->position.x - radius;
+	int max_x = o->position.x + radius;
+
+	int a = 0;
+	for (int r = min_y; r < max_y; r++) {
+		for (int c = min_x;c < max_x;c++) {
+			Environment::Tile* tile = environment->get_tile(c,r);
+			if (tile == nullptr) { continue; }
+			for (int i = 0; i < tile->tile_organisms_id.size(); i++) {
+				if (a == 0) { cout << "1" << endl; }
+				a = 1;
+				Organism* tmpOrganism = get_by_id(tile->tile_organisms_id[i]);
+				if (tmpOrganism == nullptr) { continue; }
+				if (tmpOrganism->species.species_name == species && tmpOrganism->id!=o->id) {
+					found.push_back(tmpOrganism);
+				}
+			}
 		}
 	}
-	Organism* notFound = nullptr;
-	return notFound;
+
+	vector<Organism*> found_sorted; //sorted by distance from searching organism
+	int sort_radius = 0;
+	while (found.size() > 0) {
+		for (int i = found.size()-1; i > -1; i--) {
+			if (abs(o->position.x - found[i]->position.x) == sort_radius || abs(o->position.y - found[i]->position.y) == sort_radius) {
+				found_sorted.push_back(found[i]);
+				found.erase(found.begin() + i);
+			}
+		}
+		sort_radius++;
+	}
+	return found_sorted;
 }
 
-Biology::Position Biology::search_for_terrain(Organism* o, string terrain) {//iterator indices = 0,1,2
-	for (int r = 0; r < Environment::rows; r++) {
-		for (int c = 0;c < Environment::columns;c++) {
-			if (environment->map[r][c] == 1 && abs(r-o->position.y)<5 && abs(c-o->position.x)<5)//true if found match within 5 tiles, it's not the nearest, just the first match within range
-			{
-				Position found = { c,r }; 
-				//o->o_it[0] = 0; 
-				return found;
-			} //check if you can define object in the return line such as return{r,c}; Remember that Position is x,y but arrays are y,x
+
+vector<Biology::Position> Biology::get_nearby_terrain(Organism* o, int radius, string terrain) {//can this somehow be merged fully or partially with get_nearby_organism?
+	vector<Position> found;
+	int min_y = o->position.y - radius;
+	int max_y = o->position.y + radius;
+	int min_x = o->position.x - radius;
+	int max_x = o->position.x + radius;
+
+	for (int r = min_y; r < max_y; r++) {
+		for (int c = min_x;c < max_x;c++) {
+			Environment::Tile* tile = environment->get_tile(c,r);
+			if (tile==nullptr) { continue; }
+			if (tile->terrain == "water") {
+				found.push_back({ c,r });
+			}
 		}
 	}
-	//if (o->o_it[0] > 5) {//resets direction on having moved 5 tiles
-	//	o->o_it[1] = ((rand() % (3)) - 1);//random x
-	//	o->o_it[2] = ((rand() % (3)) - 1);//random y
-	//	o->o_it[0] = 0; 
-	//	if (o->o_it[1] == 0 && o->o_it[2] == 0) { o->o_it[1] = 1; }//prevents non-movement
-	//}
-	//Position notFound = { o->position.x+ o->o_it[1],o->position.y+ o->o_it[2]};//moves 1 step in random direction if not found
-	Position notFound = { -1,-1 };
-	//o->o_it[0]++;
-	return notFound;
+
+	vector<Position> found_sorted; //sorted by distance from searching organism
+	int sort_radius = 0;
+	while (found.size() > 0) {
+		for (int i = found.size()-1; i > -1; i--) {
+			if (abs(o->position.x - found[i].x) == sort_radius || abs(o->position.y - found[i].y) == sort_radius) {
+				found_sorted.push_back(found[i]);
+				found.erase(found.begin() + i);
+			}
+		}
+		sort_radius++;
+	}
+	return found_sorted;
 }
+
 
 //utilizes o_it[0] row			problem with this function is that it's a random direction, needs a way to remember where it has already searched
-bool Biology::move_to_new_search_space(Organism* o) {//called after a search fails to find desired target, moves the organism outside its original search range.
-	int search_range = 5;
+bool Biology::move_to_new_search_space(Organism* o, int search_range) {//called after a search fails to find desired target, moves the organism outside its original search range.
+	if (o->species.mobility == "mobile") {}
+	else { return false; }//default value for if organism does not have corresponding method in this function
+
 	if (o->o_it[0][0] == 0) {//function initialization
 		int rx = (rand() % (3)) - 1;//get random int between -1 and 1
 		int ry = (rand() % (3)) - 1;
@@ -124,16 +201,21 @@ bool Biology::move_to_new_search_space(Organism* o) {//called after a search fai
 
 
 void Biology::delete_organism(Organism* o) {//can this cause a memory leak?
-	for (int i = 0; i < Biology::organisms.size();i++) { //is Biology:: neccessary before organisms? Might no be.
-		if (Biology::organisms[i].id == o->id) {
-			Biology::organisms.erase(Biology::organisms.begin()+i);
+	for (int i = 0; i < organisms[o->species.preset_index].size();i++) {
+		if (organisms[o->species.preset_index][i].id == o->id) {
+			environment->untie_from_tile(o->id, o->position.x, o->position.y);
+			organisms[o->species.preset_index].erase(organisms[o->species.preset_index].begin()+i);
 			return;
 		}
 	}
 }
 
+
 //utilizes o_it[1] row
 void Biology::idle(Organism* o) {//simply moves back and forth
+	if (o->species.mobility == "mobile") {}
+	else { return; }
+
 	if (o->o_it[1][0] == 0) {
 		move_to(o,{ o->position.x++, o->position.y});
 		o->o_it[1][0] = 1;
@@ -145,6 +227,24 @@ void Biology::idle(Organism* o) {//simply moves back and forth
 }
 
 
+void Biology::check_death(Organism* o) {
+	//check need based death conditions			exempt berrybushes for now, need to implement method for plants to obtain food/nutrients
+	if (o->species.species_name != "berrybush" && o->needs_physiological.food.current_level == 0) {
+		delete_organism(o); //temporary implementation, death should instead replace/convert organism into a corpse which decomposes.
+		cout << "dead" << endl;
+	}
+}
+
+Biology::Organism* Biology::get_by_id(int id) {
+	for (int i = 0; i < sizeof(organisms)/sizeof(vector<Organism>); i++) {
+		for (int j = 0; j < organisms[i].size();j++) {
+			if (organisms[i][j].id == id) {
+				return &organisms[i][j];
+			}
+		}
+	}
+	return nullptr; // this shouldn't happen (not finding the organism by id), I don't know why it does, though in the future it may be possible that a not found is a valid result
+}
 
 
 /*------Need Satisfaction Utility Functions------------------------------------------------------------------------------------------------*/
@@ -165,9 +265,45 @@ void Biology::change_need_level(Need* need, float change_amt) {
 void Biology::periodic_need_deterioration(Organism* o) {//All needs that deteriorate over time such as hunger, thirst and sleep rather than do to specific events/contexts such as being harmed. 
 	change_need_level(&o->needs_physiological.food, -1); //reduce food by 1 units per update
 	change_need_level(&o->needs_physiological.water, -2); //reduce water by 2 units per update
+	change_need_level(&o->needs_social.intimacy, -1); //reduce intimacy by 1 units per update
 }
 
 
+Biology::Position Biology::find_empty_tile(Organism* o, int search_range) {
+	int min_distance = 0; //radius of exclusion, as in tiles within this distance are not valid. This helps spread out organism. Unsure if this is the proper implementation or even if it should used.
+	bool found = false;
+	vector<Organism*> nearby_organisms = get_nearby_organisms(o, search_range, "all");
+	if (nearby_organisms.size() == 0) { return { -1,-1 }; }//check empty
+	
+	for (int i = nearby_organisms.size()-1;i > -1; i--) {
+		if (nearby_organisms[i]->species.species_name == "grass") {
+			nearby_organisms.erase(nearby_organisms.begin()+i);//grass/moss/etc tiles count as empty (unless the reproducer is grass/etc), therefore remove from nearby organisms list
+		}
+	}
+	if (nearby_organisms.size() == 0) { return { -1,-1 }; }//check empty after removing grass
+
+	//if (nearby_organisms.size() == search_range * search_range-1/*-1 excludes own tile*/) { return {-1,-1}; }//no empty tile found	<-- this doesn't work correctly because nearby organisms can be in the same tile apart from grass, need to implement tile exclusivity between organisms with exemptions for grass, etc.
+	for (int i = 0-search_range; i <= search_range; i++) {//finds first empty tile, no distance preference
+		for (int j = 0-search_range; j <= search_range; j++) {
+			for (int k = 0; k < nearby_organisms.size();k++) {
+				if ((abs(j) <= min_distance && abs(i) <= min_distance) == false && nearby_organisms[k]->position.x != j && nearby_organisms[k]->position.y != i) {
+					found = true;
+				}
+				else {
+					found = false;
+				}
+			}
+			if (found) { 
+				if (o->position.x + j<0 || o->position.x + j>Environment::columns) { found = false; }//if the empty tile is out of bounds. This shouldn't happen, need to rewrite function to prevent the need for this check
+				else if (o->position.y + i<0 || o->position.y + i>Environment::rows) { found = false; }
+				else {
+					return { o->position.x + j,o->position.y + i };
+				}
+				}//if this tile is empty, return this tile
+		}
+	}
+	return {-1,-1};//no empty tile found		unsure if this line is reachable but may be needed in a later version of this method?
+}
 
 
 
@@ -176,32 +312,64 @@ void Biology::periodic_need_deterioration(Organism* o) {//All needs that deterio
 
 
 bool Biology::satisfy_need_water(Organism* o) {//these actions need to have some time cost associated to them not just instant consumption, animation is optional
-	Position tmpPos = search_for_terrain(o, "water");
-	if (tmpPos.x == -1) { return false; }//case: water not found
-	bool reached = move_to(o, tmpPos);
-	int amt = 100; //for now, simply max fill the water need when water is obtained, later figure out how to decrease water source the same way calories are consumed from an organism being consumed
-	if (reached) { change_need_level(&o->needs_physiological.water, amt); }
-	return true;
+	if (o->species.hydration_method == "find_water") {
+		vector<Position> tmpPos_list = get_nearby_terrain(o, 5, "water");
+		if (tmpPos_list.size()==0) { return false; }//case: water not found
+		Position tmpPos = tmpPos_list[0];//get first element (nearest result)
+		bool reached = move_to(o, tmpPos);
+		int amt = 100; //for now, simply max fill the water need when water is obtained, later figure out how to decrease water source the same way calories are consumed from an organism being consumed
+		if (reached) { change_need_level(&o->needs_physiological.water, amt); }
+		return true;
+	}
+	return false;//default value for if organism does not have corresponding method in this function
 }
 
-bool Biology::satisfy_need_food(Organism* o) {//methods include: hunting, gathering			iterator indices = 3,4,5
-	//find food; includes: search for it, go to known location, request known location, etc
-	Organism* food = search_for_species(o, "berrybush"); //need to expand this to include searching for items as well, currently only searches for nearest one of species
-	if (food == nullptr) {
-		//random x and y
-		//if (o->o_it[3] > 5) {//resets direction on having moved 5 tiles
-		//	o->o_it[4] = ((rand() % (3)) - 1);//random x
-		//	o->o_it[5] = ((rand() % (3)) - 1);//random y
-		//	o->o_it[3] = 0;
-		//	if (o->o_it[4] == 0 && o->o_it[5] == 0) { o->o_it[4] = 1; }//prevents non-movement
-		//}
-		//move_to(o,{o->position.x+ o->o_it[4],o->position.y+ o->o_it[5]});
-		return false; }//case: food not found, therefore moves 1 step in a random direction
-	//o->o_it[3] = 0;//reset iterator
-	//acquire food; includes: grab it, kill it, buy it, ask for it, etc
-	bool reached = move_to(o, food->position);//might be better to move adjacent to target rather than the same tile?
-	if (reached) { consume(o, food); }
-	return true;
+bool Biology::satisfy_need_food(Organism* o) {//methods include: hunting, gathering			need to add method of nondestructive consumption for consuming berrybush and for partial consumption of the target organism
+	if (o->species.subsistence_method == "gather") {
+		//find food; includes: search for it, go to known location, request known location, etc
+		vector<Organism*> food_list = get_nearby_organisms(o, 5, "berrybush"); //need to expand this to include searching for items as well, currently only searches for nearest one of species
+		if (food_list.size() == 0) { return false; }//case: food not found
+		//acquire food; includes: grab it, kill it, buy it, ask for it, etc
+		bool reached = move_to(o, food_list[0]->position);//might be better to move adjacent to target rather than the same tile?
+		if (reached) { consume(o, food_list[0]); }
+		return true;
+	}
+	return false;//default value for if organism does not have corresponding method in this function
+}
+
+//need to include various methods: live birth, egg, asexual, spores, seeds, etc
+bool Biology::satisfy_need_intimacy(Organism* o) {//need to control how many are created, for some reason too many berrybushes are created, more than on screen so they may be overlapping position
+	Organism tmpOrganism;
+	if (o->species.reproduction_method == "asexual_spores"){
+		Position tmpPos = find_empty_tile(o,5);
+		if (tmpPos.x == -1) { return false; }//no empty tile found
+		tmpOrganism = { new_id(),species_presets[o->species.preset_index],tmpPos };
+		organisms[o->species.preset_index].push_back(tmpOrganism);//creates new organism within search_range tiles of originator
+		environment->tie_to_tile(tmpOrganism.id, tmpOrganism.position.x, tmpOrganism.position.y);
+		change_need_level(&o->needs_social.intimacy, 100);
+		return true;
+	}
+	//sexual_animal: find mate that also is searching for mate, move to the same tile, new organism is created. Implement pregnancy later.
+	else if (o->species.reproduction_method=="sexual_animal") { //is this fine as if statements or is switch-case better?
+		vector<Organism*> potential_mates = get_nearby_organisms(o,5, o->species.species_name);
+		if (potential_mates.size() == 0) { return false; }
+		for (int i = 0; i < potential_mates.size(); i++) {
+			if (potential_mates[i]->sex != o->sex) {//selects first match
+				bool reached = move_to(o, potential_mates[i]->position);
+				if (reached) {
+					change_need_level(&o->needs_social.intimacy, 100);
+					if (o->sex == false) {//if female reaches location of male, births new organism
+						tmpOrganism = { new_id(),species_presets[o->species.preset_index],o->position,(bool)(rand() % 2/*50/50 chance of male/female*/) };
+						organisms[o->species.preset_index].push_back(tmpOrganism);
+						environment->tie_to_tile(tmpOrganism.id, tmpOrganism.position.x, tmpOrganism.position.y);
+					}
+				}
+				return reached;
+			}
+		}
+		return false;
+	}
+	return false;//default value for if organism does not have corresponding method in this function
 }
 
 
@@ -210,19 +378,20 @@ bool Biology::satisfy_need_food(Organism* o) {//methods include: hunting, gather
 
 
 
-
-
+//next function to implement is death from lack of needs and old age. The goal is to create a stable simple ecosystem with simple behaviors and then implement a way for the player to interact with it.
 /*------Biology Main Functions------------------------------------------------------------------------------------------------*/
 
-int flag = false;//<-- this is a problem becuase it is not instance (organism) specific
+
 void Biology::update(Organism* o) {
 	periodic_need_deterioration(o);
-	if (o->needs_physiological.food.current_level < 80 && satisfy_need_food(o)) {}	//priority right now is a simple if-else, but it needs to be reorderable such that priority can change based on the need and current_levels as well as cost to fulfill such that if the npc is 1 step away from water, they finish getting water instead of going back for food if they get just a little hungry
-	else if (o->needs_physiological.water.current_level < 80 && satisfy_need_water(o)) {}
-	else {
-		move_to_new_search_space(o); //if none of the above needs find their targets
+	if (o->needs_physiological.food.current_level < 80 && satisfy_need_food(o)) {}	//priority right now is a simple if-else, but it needs to be reorderable such that priority can change based on the need and current_levels as well as cost to fulfill such that if the npc is 1 step away from water, they finish getting water instead of going back for food if they get just a little hungry. This should be expanded to include finishing complex tasks, such as an organism that is on the hunt should not go back home in the middle of the hunt if avoidable.
+	else if (o->needs_physiological.water.current_level < 80 && satisfy_need_water(o)) {}//these only trigger if the previous need did not find its target or the previous need level is high enough
+	else if(o->needs_social.intimacy.current_level<50 && satisfy_need_intimacy(o)){}
+	else{
+		move_to_new_search_space(o,5); //if none of the above needs find their targets
 	}
-	idle(o);//idle function for if all needs are met
+	idle(o); //idle function for if all needs are met
+	check_death(o);//should this go at the start or end? Could it be merged with need_deterioration?
 }
 
 
