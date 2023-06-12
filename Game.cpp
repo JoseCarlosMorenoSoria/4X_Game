@@ -5,6 +5,9 @@ using namespace std; //Note: Loops are expensive??, therefore try to eliminate l
 //for each loops are more legible? use those whenever possible?
 //should memory footprint be reduced by instead of storing and passing pointers, store and pass id?
 //a lot of cases should be eliminated by ensuring they don't occur in the first place, such as searching for an organism id that doesn't exist, searching an out of bounds tile, etc.
+//later on, compact structs into encoding as much information within a single int so as to reduce memory footprint. Also look into flyweight design pattern
+//pointers/addresses take up around 8 bytes, therefore memory space might be saved by using custom sized ids in their place so as to use less bits of memory
+//I kept having too many problems with pointers becoming invalid, so I am eliminating as many as poosible and simply passing id's instead
 
 Game::Game() {
 	isRunning = false;
@@ -67,15 +70,7 @@ void Game::update() {
 	else { daytime = 0; }
 	//cout << daytime << endl;
 
-	for (int i = 0; i < sizeof(biology.organisms)/sizeof(vector<Biology::Organism>); i++) {
-		//iterates in reverse order in case an element is deleted, to avoid skipping over an element. See: https://stackoverflow.com/a/63598736/22054183
-		for (int j = biology.organisms[i].size() - 1; j > -1; j--) {
-			string tmpString = biology.organisms[i][j].species.species_name;
-			if (tmpString == "berrybush" || tmpString == "human") {
-				biology.update(&biology.organisms[i][j]);
-			}
-		}
-	}
+	biology.update_all();
 	
 }
 
