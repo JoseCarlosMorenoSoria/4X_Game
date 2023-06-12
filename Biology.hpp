@@ -19,7 +19,7 @@ public:
 	Environment* environment;//reference to game's environment
 
 	struct Species {
-		int preset_index;
+		int preset_index = -1;
 		string species_name="";
 		const char* png_file="";  //this is kept in the species struct for now, but will need to be in the organism struct later to allow variability within the species
 		int calories; //move to organism struct later given organisms grow and therefore their calories should increase, species should contain a calorie range according to age/size/etc
@@ -27,16 +27,17 @@ public:
 		string subsistence_method = "";
 		string hydration_method = "";
 		string mobility = "";
+		float max_lifespan = -1; //measured in years
 	};
 	
 	static const int number_of_species = 6;
 	Species species_presets[number_of_species] = {//preset index order affects render order, therefore change grass to index 0, tree to 1, berrybush to 2, etc
 	{0, "wolf" },
-	{1, "deer", "pics/deer.png"},
+	{1, "deer", "pics/deer.png", },
 	{2, "grass", "pics/grass.png"},
 	{3, "tree", "pics/tree.png"},
-	{4, "berrybush", "pics/berrybush.png", 40, "asexual_spores"}, //reproduction method is temporarily spores, should be seeds?
-	{5, "human", "pics/man.png",100,"sexual_animal", "gather", "find_water", "mobile"}, //initially, a human is sort of like a more complex wolf
+	{4, "berrybush", "pics/berrybush.png", 40, "asexual_spores","","","",0.6}, //reproduction method is temporarily spores, should be seeds?
+	{5, "human", "pics/man.png",100,"sexual_animal", "gather", "find_water", "mobile", 2}, //initially, a human is sort of like a more complex wolf
 	};
 
 
@@ -83,9 +84,12 @@ public:
 	int id_iterator = 0;//for tracking next available id number, unsure if int is enough or if id's that have been freed should be resused.
 	struct Organism {//needs an automatic increment for ID when creating a new one
 		int id;
-		Species species; //maybe make this a pointer so that each organism does not have a separate instance copy of species
+		Species species;//should this be a pointer or instead an int with the species_preset_index? Tried to change this to a pointer, for some unknown reason it failed to pass a valid pointer when creating a new ogranism
 		Position position;
 		bool sex; //true==male, false==female
+
+		//these are never set when creating a new organism, should always start at default values
+		float age = 0;//measured in years
 		Needs_Physiological needs_physiological;
 		Needs_Safety needs_safety;
 		Needs_Social needs_social;
@@ -102,28 +106,29 @@ public:
 	
 
 	/*Utility Functions*/
-	bool move_to(Organism* o, Position p);//returns true when it reaches target position
-	vector<Organism*> get_nearby_organisms(Organism* o, int radius, string species);//gets all organisms within a search radius matching a given species, sorted by nearest organisms first. Later replace the species parameter with a more general condition parameter.
-	vector<Position> get_nearby_terrain(Organism* o, int radius, string terrain);//same as above but for terrain such as searching for water
-	void delete_organism(Organism* o);
+	bool move_to(int id, Position p);//returns true when it reaches target position
+	vector<Organism*> get_nearby_organisms(int id, int radius, string species);//gets all organisms within a search radius matching a given species, sorted by nearest organisms first. Later replace the species parameter with a more general condition parameter.
+	vector<Position> get_nearby_terrain(int id, int radius, string terrain);//same as above but for terrain such as searching for water
+	void delete_organism(int id);
 	int new_id();
-	bool move_to_new_search_space(Organism* o, int search_range);
-	void idle(Organism* o);
-	void check_death(Organism* o);//currently only deletes the organism, should instead replace with relevant corpse (corpse is an item?) which then deteriorates into nothing releasing nutrients into soil/water
+	bool move_to_new_search_space(int id, int search_range);
+	void idle(int id);
+	void check_death(int id);//currently only deletes the organism, should instead replace with relevant corpse (corpse is an item?) which then deteriorates into nothing releasing nutrients into soil/water
 	Organism* get_by_id(int id); //currently only used at start of update function, used because pointer would sometimes become invalid when passed to the update function, this is a workaround because I couldn't figure out the reason for the pointer becoming invalid
 
 	/*Needs Satisfaction Utility Functions*/
 	void change_need_level(Need* need, float change_amt); //increase or decrease the need level of an organism, ex: decrease food need satisfaction (aka increase hunger)
-	void periodic_need_deterioration(Organism* o);
-	void consume(Organism* o, Organism* food);//o gains the calories in food and destroys food instance
-	Position find_empty_tile(Organism* o, int search_range);//return location without any organism present, used for asexual_spores reproduction method
+	void periodic_need_deterioration(int id);
+	void consume(int id, int food_id);//o gains the calories in food and destroys food instance
+	Position find_empty_tile(int id, int search_range);//return location without any organism present, used for asexual_spores reproduction method
 
 	/*Needs Satisfaction Main Functions*/
-	bool satisfy_need_water(Organism* o);
-	bool satisfy_need_food(Organism* o);//attempts to satisfy food need, currently default satisfaction is current_level=100
-	bool satisfy_need_intimacy(Organism* o);
+	bool satisfy_need_water(int id);
+	bool satisfy_need_food(int id);//attempts to satisfy food need, currently default satisfaction is current_level=100
+	bool satisfy_need_intimacy(int id);
 
 	/*Biology Main Functions*/
-	void update(Organism* o);//general update function that handles other functions
+	void update(int id);//general update function that handles other functions
+	void update_all();//calls update on every organism
 };
 #endif
