@@ -26,7 +26,6 @@ public:
 
 	void textureManager(string texture, SDL_Rect destRect);
 
-private:
 	bool isRunning;
 	SDL_Window* window; //window and renderer have to(?) be pointers because they aren't instanced until the Game::init function runs.
 	SDL_Renderer* renderer; //should this be made static and public?
