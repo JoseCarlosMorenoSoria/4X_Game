@@ -23,7 +23,6 @@
     <ClCompile Include="Environment.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="pseudo_Biology.cpp" />
     <ClCompile Include="pseudo_Biomes.cpp" />
     <ClCompile Include="pseudo_Environment.cpp" />
     <ClCompile Include="pseudo_Player.cpp" />

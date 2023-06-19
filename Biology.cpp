@@ -9,10 +9,15 @@ int Biology::id_iterator;
 Biology::Biology() {}
 //Biology()						init
 Biology::Biology(int a) {
-	organisms.reserve(1000);//reserve space for 1,000 organisms
+	organisms.reserve(5000);//reserve space for 5,000 organisms
 //whenever the vector resizes or adjusts it will invalidate all pointers to its elements, therefore all organisms will need to be 
 //reinserted into the radix tree as if for the first time. To avoid this either use arrays instead of vectors or set vector to a minimum size and 
 //throw a custom error message if vector exceeds this size so as to later implement a reset of all pointers when vector grows past limit.
+
+/*
+* instead of storing a pointer in the hash-table, you can store index of the element in your vector
+*/
+
 	id_iterator = 0;
 	Organism new_o;
 	new_o = {new_id(5),5,0,0}; //place 1 human
@@ -20,9 +25,9 @@ Biology::Biology(int a) {
 
 	//instantiate organisms
 	
-	for (int i = 0; i < 20; i++) {
+	for (int i = 0; i < 20; i++) {//generates about 800 grass tiles
 		for (int j = 0; j < 40; j++) {
-			new_o = { new_id(0), 0, j, i };//grass
+			new_o = { new_id(0), 0, j, i };//grass		grass might make more sense to not update on every global update but instead only a portion does at a time. Another approach to increase efficiency would be to try to conceptualize grass as a single organism and only track its internal and external edges/holes. Or maybe create a fixed number of grass entities (object and pointer) for every state it could be in and use those for various tiles, switching between states as a tile is affected by external factors.
 			insert_o(new_o);
 		}
 	}
@@ -187,7 +192,7 @@ bool Biology::out_of_bounds(int x, int y) {
 	return false;
 }
 //find()						general search function
-Biology::return_vars Biology::find(Organism* o, string target_type, string target, int search_radius) {
+Biology::return_vars Biology::find(Organism* o, string target_type, string target, int search_radius) {//to find an empty tile (no organisms), just search "terrain" "all" to get all tiles in search space and then select the first tile that has an organism id vector size of 0 (or 1 and check if it's grass or not)
 	bool found_target = false;
 	return_vars r;
 	//gets list of all tiles within search_radius, sorted by distance to search origin. Iterates in rings in an outward direction.
@@ -214,7 +219,9 @@ Biology::return_vars Biology::find(Organism* o, string target_type, string targe
 	vector<Organism*> found_o;
 	for (int i = 0; i < search_space.size(); i++) {
 		if (target_type == "terrain") {
-			if (search_space[i].terrain == target) {
+			bool all = false;
+			if (target == "all") { all = true; }
+			if (all || search_space[i].terrain == target) {
 				found_t.push_back(search_space[i]);
 			}
 			if(found_t.size()!=0){
@@ -245,6 +252,7 @@ Biology::return_vars Biology::find(Organism* o, string target_type, string targe
 	return r;
 }
 
+//need to add an external reset for this, so that when x is found, this function's iterators reset for next time
 //utilizes o_it[0] row			problem with this function is that it's a random direction, needs a way to remember where it has already searched
 bool Biology::move_to_new_search_space(Organism* o, int search_range) {//called after a search fails to find desired target, moves the organism outside its original search range.
 	if (o->o_it[0][0] == 0) {//function initialization
@@ -363,6 +371,8 @@ Biology::Species Biology::get_species(int species_id) {
 		}
 	}
 }
+
+
 
 
 void Biology::update(Organism* o) {

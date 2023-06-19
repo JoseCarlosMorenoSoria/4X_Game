@@ -18,9 +18,6 @@
     <ClCompile Include="pseudo_Environment.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pseudo_Biology.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="psuedo_People.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
