@@ -19,6 +19,7 @@ int main(int argc, const char* argv[]) {
 		game.handleEvents(); 
 		int speed = 1; //controls how many updates before a new frame is rendered. Useful for speeding up time/debugging
 		for (int i = 0; i < speed; i++) {
+			srand((unsigned int)time(NULL));//ensures random numbers don't repeat every program run
 			game.update();
 		}
 		game.render();

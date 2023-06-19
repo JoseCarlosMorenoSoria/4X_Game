@@ -9,11 +9,50 @@ int Biology::id_iterator;
 Biology::Biology() {}
 //Biology()						init
 Biology::Biology(int a) {
+	organisms.reserve(1000);//reserve space for 1,000 organisms
+//whenever the vector resizes or adjusts it will invalidate all pointers to its elements, therefore all organisms will need to be 
+//reinserted into the radix tree as if for the first time. To avoid this either use arrays instead of vectors or set vector to a minimum size and 
+//throw a custom error message if vector exceeds this size so as to later implement a reset of all pointers when vector grows past limit.
 	id_iterator = 0;
 	Organism new_o;
-	new_o = {new_id(1),1,0,0}; //place 1 human
+	new_o = {new_id(5),5,0,0}; //place 1 human
 	insert_o(new_o);
+
+	//instantiate organisms
+	
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 40; j++) {
+			new_o = { new_id(0), 0, j, i };//grass
+			insert_o(new_o);
+		}
+	}
+	for(int i=0;i<15;i++){
+		int new_x = rand() % Environment::columns;
+		int new_y = rand() % Environment::rows;
+		new_o = { new_id(1), 1, new_x, new_y };//tree
+		insert_o(new_o);
+	}
+	for(int i=0;i<30;i++){
+		int new_x = rand() % Environment::columns;
+		int new_y = rand() % Environment::rows;
+		new_o = { new_id(2), 2, new_x, new_y };//berrybush
+		insert_o(new_o);
+	}
+	for(int i=0;i<4;i++){
+		int new_x = rand() % Environment::columns;
+		int new_y = rand() % Environment::rows;
+		new_o = { new_id(3), 3, new_x, new_y, (bool)(i % 2)};//ensures a 50/50 sex ratio //deer
+		insert_o(new_o);
+	}
+	for (int i = 0;i < 4;i++) {
+		int new_x = rand() % Environment::columns;
+		int new_y = rand() % Environment::rows;
+		new_o = { new_id(5), 3, new_x, new_y, (bool)(i % 2)};//ensures a 50/50 sex ratio //human
+		insert_o(new_o);
+	}
+	
 }
+//done
 int Biology::new_id(int species_id) {//creates new id for new organism, id can encode further info such as species id, etc. Given organisms are sorted by id through radix sort/search, it speeds up access time
 	int id = id_iterator;
 	id_iterator++;
@@ -25,6 +64,10 @@ int Biology::new_id(int species_id) {//creates new id for new organism, id can e
 //done
 void Biology::insert_o(Organism organism) {
 	organisms.push_back(organism);
+	if (organisms.size() >= 1000) { 
+		cout << "error: vector reserved size exceeded, all pointers will be invalidated, need to implement a full reinsertion of vector into tree and reserving of a larger vector size" << endl; 
+		return;
+	}
 	Organism* o = &organisms.back();
 	radix* it = &o_root;
 	int digits = 0;
@@ -87,37 +130,36 @@ void Biology::insert_o(Organism organism) {
 	if(it->o==nullptr){//if first time inserting this id, tie it to its tile
 		Environment::map[o->y][o->x].organism_id.push_back(o->organism_id);
 	}
+	cout << o->organism_id << " inserted at " << o->x << ", " << o->y << endl;
 	it->o = o;
 }
 //done						simple move function
-bool Biology::move_to(int id, int x, int y) {//return true if destination reached, else false
-	Organism o = get_by_id(id);
+bool Biology::move_to(Organism* o, int x, int y) {//return true if destination reached, else false
 	//check if destination is out of bounds
 	if (x > Environment::columns) { x = Environment::columns; }
 	else if (x < 0) { x = 0; }
 	if (y > Environment::rows) { y = Environment::rows; }
 	else if (y < 0) { y = 0; }
 	//untie from tile
-	Environment::Tile* t = &Environment::map[o.y][o.x];
+	Environment::Tile* t = &Environment::map[o->y][o->x];
 	for (int i = 0; i < t->organism_id.size(); i++) {
-		if (t->organism_id[i] == id) {
+		if (t->organism_id[i] == o->organism_id) {
 			t->organism_id.erase(t->organism_id.begin() + i);
 			break;
 		}
 	}
 	//change organism's location
-	int old_x = o.x;
-	int old_y = o.y;
-	if (x > o.x) { o.x++; }
-	else if (x < o.x) { o.x--; }
-	if (y > o.y) { o.y++; }
-	else if (y < o.y) { o.y--; }
+	int old_x = o->x;
+	int old_y = o->y;
+	if (x > o->x) { o->x++; }
+	else if (x < o->x) { o->x--; }
+	if (y > o->y) { o->y++; }
+	else if (y < o->y) { o->y--; }
 	//tie to new tile
-	Environment::map[o.y][o.x].organism_id.push_back(id);
+	Environment::map[o->y][o->x].organism_id.push_back(o->organism_id);
 	
 	//return
-	insert_o(o);
-	if (x == o.x && y == o.y) {
+	if (x == o->x && y == o->y) {
 		return true;
 	}
 	else {
@@ -125,8 +167,7 @@ bool Biology::move_to(int id, int x, int y) {//return true if destination reache
 	}
 }
 //death()						handles if and when ann organism dies and deterioration of the corpse
-bool Biology::death(int id) {
-	Organism o = get_by_id(id);
+bool Biology::death(Organism* o) {
 	//if(o.alive==false){decompose corpse}
 	//if(done_decomposing){delete organism object from radix tree}
 	//ex: bool death_condition_1 = a == true || b == false;
@@ -134,7 +175,7 @@ bool Biology::death(int id) {
 	return true;//if dead
 }
 //birth()						create new organism, allows options for specific contexts
-void Biology::birth(int mother_id, int father_id) {
+void Biology::birth(Organism* mother, Organism* father) {
 
 }
 //out_of_bouds()	true if out of bounds, false if in bounds
@@ -146,16 +187,16 @@ bool Biology::out_of_bounds(int x, int y) {
 	return false;
 }
 //find()						general search function
-Biology::return_vars Biology::find(int id, string target_type, string target, int search_radius) {
+Biology::return_vars Biology::find(Organism* o, string target_type, string target, int search_radius) {
+	bool found_target = false;
 	return_vars r;
-	Organism o = get_by_id(id);
 	//gets list of all tiles within search_radius, sorted by distance to search origin. Iterates in rings in an outward direction.
 	vector<Environment::Tile> search_space;
 	for (int tmp_radius = 0; tmp_radius <= search_radius; tmp_radius++) {
-		int min_x = o.x - tmp_radius;
-		int max_x = o.x + tmp_radius;
-		int min_y = o.y - tmp_radius;
-		int max_y = o.y + tmp_radius;
+		int min_x = o->x - tmp_radius;
+		int max_x = o->x + tmp_radius;
+		int min_y = o->y - tmp_radius;
+		int max_y = o->y + tmp_radius;
 		for (int y = min_y; y < max_y; y++) {
 			int x = tmp_radius;
 			if (!out_of_bounds(x, y)) { search_space.push_back(Environment::map[y][x]); }
@@ -170,39 +211,69 @@ Biology::return_vars Biology::find(int id, string target_type, string target, in
 		}
 	}
 	vector<Environment::Tile> found_t;
-	vector<Organism> found_o;
+	vector<Organism*> found_o;
 	for (int i = 0; i < search_space.size(); i++) {
 		if (target_type == "terrain") {
 			if (search_space[i].terrain == target) {
 				found_t.push_back(search_space[i]);
 			}
-			r.r_tile = found_t;
-			return r;
+			if(found_t.size()!=0){
+				found_target = true;
+				r.r_bool.push_back(found_target);
+				r.r_tile = found_t;
+				return r;
+			}
 		}
 		else if (target_type == "species") {
 			bool all = false;
 			if (target == "all") { all = true; }
 			for (int j = 0; j < search_space[i].organism_id.size(); j++) {
-				Organism tmp_o = get_by_id(search_space[i].organism_id[j]);
-				if (all || get_species(tmp_o.organism_id).species_name == target && o.organism_id!=tmp_o.organism_id) {
+				Organism* tmp_o = get_by_id(search_space[i].organism_id[j]);
+				if (all || get_species(tmp_o->organism_id).species_name == target && o->organism_id!=tmp_o->organism_id) {
 					found_o.push_back(tmp_o);
 				}
 			}
-			r.r_organism = found_o;
-			return r;
+			if (found_o.size() != 0) {
+				found_target = true;
+				r.r_bool.push_back(found_target);
+				r.r_organism = found_o;
+				return r;
+			}
 		}
 	}
+	r.r_bool.push_back(found_target);
+	return r;
 }
+
+//utilizes o_it[0] row			problem with this function is that it's a random direction, needs a way to remember where it has already searched
+bool Biology::move_to_new_search_space(Organism* o, int search_range) {//called after a search fails to find desired target, moves the organism outside its original search range.
+	if (o->o_it[0][0] == 0) {//function initialization
+		int rx = (rand() % (3)) - 1;// = -1 | 0 | 1		gets direction
+		int ry = (rand() % (3)) - 1;
+		if (rx == 0 && ry == 0) { rx++; }//prevents (rx & ry)==0
+		o->o_it[0][1] = o->x + (rx * search_range);//move out of the original search range in chosen direction
+		o->o_it[0][2] = o->y + (ry * search_range);
+		o->o_it[0][0] = 1; //marks function as initialized
+	}
+	bool reached = move_to(o, o->o_it[0][1], o->o_it[0][2] );//return true when reached
+	if (reached) {//once out of range, reset function variables
+		o->o_it[0][0] = 0;
+		o->o_it[0][1] = 0;
+		o->o_it[0][2] = 0;
+	}
+	return reached;
+}
+
+
 //satisfy_needs()				sorts needs by priority, iterates over all needs attempting to fill them
-void Biology::satisfy_needs(int id) {
-	Organism o = get_by_id(id);
+void Biology::satisfy_needs(Organism* o) {
 	int top_priority = 0;
 	int need_index=0;
-	for (int i = 0; i < sizeof(o.needs) / sizeof(Need); i++) {
-		if (o.needs[i].priority > top_priority) { top_priority = o.needs[i].priority; need_index = i; }
+	for (int i = 0; i < sizeof(o->needs) / sizeof(Need); i++) {
+		if (o->needs[i].priority > top_priority) { top_priority = o->needs[i].priority; need_index = i; }
 	}
 	//get need name
-	string need = o.needs[need_index].need_name;
+	string need = o->needs[need_index].need_name;
 	if(need=="food"){
 		//search nearby for organisms or items that match diet
 		//according to nearest result, choose/use corresponding method (gather, solo hunt, pack hunt, etc)
@@ -218,15 +289,15 @@ void Biology::satisfy_needs(int id) {
 //carry()						pick up or drop item
 //fight()						cause damage to another organism
 //periodic()					all periodic changes such as need deterioration should be here
-void Biology::periodic(int id) {
+void Biology::periodic(Organism* o) {
 
 }
 //context()						a listener that checks the organism"s state and immediate surroundings to respond to things like taking damage or the appearance of a threat
-void Biology::context(int id) {
+void Biology::context(Organism* o) {
 
 }
 //get_by_id()					returns organism
-Biology::Organism Biology::get_by_id(int id) {
+Biology::Organism* Biology::get_by_id(int id) {
 	radix* it = &o_root;
 	int digits = 0;
 	int tmp_id = id;
@@ -281,7 +352,7 @@ Biology::Organism Biology::get_by_id(int id) {
 	if (it->o == nullptr) {
 		cout << "id not found" << endl;//same as other not found above
 	}
-	return *it->o;
+	return it->o;
 }
 
 //get_species()					gets corresponding species, used to avoid holding a copy per organism without using pointers
@@ -294,11 +365,19 @@ Biology::Species Biology::get_species(int species_id) {
 }
 
 
-void Biology::update(int id) {
+void Biology::update(Organism* o) {
 
 }
 void Biology::update_all() {
-	move_to(1, 10, 10);
+	Organism* o = get_by_id(5);
+	return_vars r = find(o, "terrain", "water", 10);
+	if (r.r_bool[0] == true) {
+		move_to(o, r.r_tile[0].x, r.r_tile[0].y); 
+	}
+	else {
+		//if not found within search space, move to new search space
+		move_to_new_search_space(o, 10);
+	}
 }
 
 

@@ -93,16 +93,33 @@ void Game::render() {
 		destR.y = y * 32;
 		for (int x = corner1_x; x < corner2_x; x++) {
 			destR.x = x * 32;
+			//print terrain
 			textureManager(environment.map[y][x].terrain_png, destR);
 			Environment::Tile t = environment.map[y][x];
+			//sort before printing to get proper render order. Sorted by last digit which is species digit, lower digits like 0 (grass) get printed first
+			bool swap = true;
+			while (swap) {
+				swap = false;
+				for (int i = 0; t.organism_id.size()>1 && i < t.organism_id.size() - 1; i++) {//for some reason, when size==0, it doesn't skip the for loop
+					if (t.organism_id[i] % 10 > t.organism_id[i + 1] % 10) {
+						int d = t.organism_id[i];
+						t.organism_id[i] = t.organism_id[i + 1];
+						t.organism_id[i + 1] = d;
+						swap = true;
+					}
+				}
+			}
+			environment.map[y][x] = t;
+			//print organisms
 			for (int i = 0; i < t.organism_id.size(); i++) {//need to figure out how to efficiently render in correct order so things like grass are rendered first and humans last
-				Biology::Organism o = biology.get_by_id(t.organism_id[i]);
-				textureManager("pics/" + biology.get_species(o.species_id).species_name + o.png_file_state + ".png", destR);
+				Biology::Organism* o = biology.get_by_id(t.organism_id[i]);
+				textureManager("pics/" + biology.get_species(o->species_id).species_name + o->png_file_state + ".png", destR);
 			}
 		}
 	}
 	SDL_RenderPresent(renderer);
 }
+
 
 void Game::clean() {
 	SDL_DestroyWindow(window);
