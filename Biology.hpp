@@ -89,6 +89,10 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 		//[20]	 affection = "";
 	//Needs_Esteem {
 		//[21]	 social_status = ""; //animals compete in social hierarchy
+		// 
+		// 
+// All below are primarily or exclusively human needs and therefore should take lower priority in implementation and may even make sense to move to the people file.
+		// 
 		//[22]	 self_confidence = "";
 	//Needs_Cognitive {
 		//[23]	 creativity = "";
@@ -106,7 +110,7 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 		//[32]	 talents = ""; //seems redundant with self confidence?
 		//[33]	 pursuing_goals = ""; //unique human/personal goals I guess?
 	//Needs_Transcendence { //applies only to humans
-		//[34]	 transcendence = ""; //desire to feel part of something greater than the self or the material, includes spirituality/altruism/dedication to a cause/etc
+		//[34]	 transcendence //desire to feel part of something greater than the self or the material, includes spirituality/altruism/dedication to a cause/etc
 		
 
 
@@ -139,7 +143,7 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 		float age = 0;//measured in years
 		string png_file_state="";//contains state portion of png file for organism. ex: sleep, dead. Default = ""		should be derived at render time from all attributes rather than kept as a state
 		bool deleted = false; //used to track which organisms have been deleted so as not to erase from vector which can invalidate pointers.
-		Need needs[25];
+		Need needs[35];
 		int o_it[2][5] = {//external iterator for functions
 			{0,0,0,0,0},//[0] move_to_new_search_space()
 			{0,0,0,0,0}
@@ -174,25 +178,25 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 	};
 
 	int new_id(int species_id);
-	//move_to()						simple move function
+	//simple move function
 	bool move_to(Organism* o, int x, int y);
-	//death()						handles if and when ann organism dies and deterioration of the corpse
+	//handles if and when ann organism dies and deterioration of the corpse
 	bool death(Organism* o);
-	//birth()						create new organism, allows options for specific contexts
+	//create new organism, allows options for specific contexts
 	void birth(Organism* mother, Organism* father);
-	//find()						general search function
+	//general search function
 	return_vars find(Organism* o, string target_type, string target, int search_radius);
-	//satisfy_needs()				sorts needs by priority, iterates over all needs attempting to fill them
+	//sorts needs by priority, iterates over all needs attempting to fill them
 	void satisfy_needs(Organism* o); //includes consume, sleep, and change_need_level functions
 	//carry()						pick up or drop item
 	//fight()						cause damage to another organism
-	//periodic()					all periodic changes such as need deterioration should be here as well as aging
+	//all periodic changes such as need deterioration should be here as well as aging
 	void periodic(Organism* o);
-	//context()						a listener that checks the organism"s state and immediate surroundings to respond to things like taking damage or the appearance of a threat
+	//a listener that checks the organism"s state and immediate surroundings to respond to things like taking damage or the appearance of a threat
 	void context(Organism* o);
-	//get_by_id()					returns organism
+	//returns organism
 	Organism* get_by_id(int id);
-	//get_species()					gets corresponding species, used to avoid holding a copy per organism without using pointers
+	//gets corresponding species, used to avoid holding a copy per organism without using pointers
 	Species get_species(int species_id);
 	//check if out of bounds, true if yes, false if no
 	bool out_of_bounds(int x, int y);
@@ -204,7 +208,6 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 	//idle()
 	
 	//the goal is to have very few and very simple functions which can be combined to create more complex behavior without introducing new bugs
-	//work directly with objects, no references or pointers at all
 
 
 

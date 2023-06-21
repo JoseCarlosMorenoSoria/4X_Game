@@ -4,6 +4,8 @@
 using namespace std;
 
 
+//biomes are just a name for a climate tied to a set of biology, so it might make more sense to implement in environment file if it is present at all
+
 //add day/night cycle and 24hr day. Length of day is affected by both seasons and lattitude. 
 
 

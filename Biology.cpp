@@ -282,17 +282,155 @@ void Biology::satisfy_needs(Organism* o) {
 	}
 	//get need name
 	string need = o->needs[need_index].need_name;
-	if(need=="food"){
-		//search nearby for organisms or items that match diet
-		//according to nearest result, choose/use corresponding method (gather, solo hunt, pack hunt, etc)
-	}
-	if (need == "water") {}
+	
 //	if (need == "") {
 // 	   //find path/target to satisfy need
 //	   //choose method according to target/path
 // }
 //	if (need == "") {}
 //	if (need == "") {}
+
+
+
+
+
+//Needs to implement right now			Think first in terms of conditional statements, then in functions to be able to check those conditionals.
+	//Needs_Physiological {//all needs start at 100% satisfaction, each species (and sometimes individual) has a different rate of decreasing and increasing each
+		//[0]	 air = "";
+		// if submerged in water, air need_level falls and death occurs when it reaches 0, need_level rises once out of water again. Inverse for fish.
+		// if air has smoke/poison air need_level falls until death at 0 same as submerged underwater. Poison (maybe smoke?) has added damage effects
+		// Requires a way to check if submerged/buried and whether tile has airborne smoke/poison
+		// Satisfy need by moving to nearest source of clean air
+		// Low need causes lung damage? Reduces ability to move/think.
+	if (need == "air") {
+		//function
+	}
+		//[1]	 heat = ""; //maintain proper temperature hot/cold
+		// if tile or item carried is too hot or too cold, adjust need level according to temperature and take damage at a certain level. 
+		// Unlike other needs, this one is good at level 50, 100 is deadly hot and 0 is deadly cold with corresponding damage types (frozen solid, frostbite, hypothermia, heat stroke, burning, charred, incinerated) and affects ability to move
+		// Satisfy need by moving towards better temperature tiles or dropping hot/cold item. 
+		// Need to implement a temperature system in the environment/items influenced by air/sun/shade/etc.
+	if (need == "heat") {
+		//function
+	}
+
+		//[2]	 clothes = ""; //only applies to humans (and hermit crabs), might make more sense to merge with temperature as clothes is about enduring the environment
+		// Implement this later, requires ability to craft clothes and ingredients to do so, etc. 
+		// 
+		//
+		//[3]	 hygiene = ""; //only applies to humans, maybe cats?
+		// Dirtiness reduces need level and causes morale/discomfort hits (how is this measured and stored?) and increased chances of disease/infection
+		// Need to implement sources and types of dirtiness (dust/dirt/mud/sweat/blood/etc)
+		// 
+		// 
+		//[4]	 light = ""; //especially important for plants
+		// Need to implement a light (and therefore also shade) system in the environment for tiles, have organisms move to tiles with more light. Light level adjusts need level.
+		// If need level is 0 then the organism is blind and moves blindly until it gets to better lighting. Low light causes mood hit (how to measure/store this?)
+		// A plant with lower light level grows slower and if the level is too low it begins to take damage (wilt) and die
+	if (need == "light") {
+		//function
+	}
+		// 
+		//[5]	 water = "";
+		// Need to implement water system later on as well as containers for water like pots/cups/waterskins. 
+		// Need level deteriorates over time, with deterioration rate influenced by heat
+		// Satisfy need by finding nearest water source and consuming it
+		// Plants get their water need satisfied by growing out roots into surrounding tiles in preference towards tiles that contain more water. Dirt tiles can hold water.
+		// These tiles get their water level replenished by either surrounding water over time or rain. 
+	if (need == "water") {
+		//function
+	}
+		// 
+		//[6]	 urination = "";
+		// Need is inversely proportional to water need, as in if hydrated need to piss, else no. If need reaches 0, piss. Need deteriorates periodically. 
+		// Satisfied by taking a piss which resets need level to 100. Pissing adds piss, a type of contaminated water, to tile.
+	if (need == "urination") {
+		//function
+	}
+		// 
+		//[7]	 food = ""; //soil nutrients for plants
+		// Need level deteriorates over time, satisfy need by consuming food that matches organism's diet, obtain food through corresponding subsistence methods
+		// Food is either an organism or an item, contains calories which fill up according to need level change rate, 
+		// If need level reaches 0, die of starvation. Later add a calorie in / calorie out system to control fat/skinny levels. Then a nutrition system for malnourishment.
+		// Plants get their food need satisfied the same way they get water, by growing roots towards dirt tiles with higher soil fertility/nutrition levels. These tiles level are replenished by decomposing corpses and decomposing excrement.
+	if (need == "food") {
+		//function
+	}
+		// 
+		//[8]	 excretion = "";
+		// Need is inversly proportional to food need, so if food need level is high, excretion level deteriorates over time. If level hits 0, take a shit. This creates a shit item in the tile which decomposes over time until it dissappears, increasing soil nutrition as it does. 
+		// While the shit item is still present, it has a chance to infect nearby organisms with a disease. If it is contact with water either as a water tile or held in the soil, the water becomes contaminated water.
+	if (need == "excretion") {
+		//function
+	}
+		// 
+		//[9]	 shelter = ""; //applies only to animals that live in caves, nests, etc
+		// Find shelter, if no shelter found, build shelter. Use shelter to sleep at night, shade, lay eggs, stockpile food/materials, idle, etc. 
+		// Need to implement both a natural shelter system (caves/holes) and the ability to build shelters (dig hole, build nest, build walls and roof, etc)
+		// Need is 0 when sleeping without shelter, 100 if sleeping with shelter. Later on add a quality system for shelter. Shelter deteriorates according to type/material/quality/etc so it must be constantly repaired. 
+		// Need to implement a system of territoriality, where an organism designates certain tiles as theirs, other's or unclaimed and either shares or competes with others for those tiles. Ownership/claims over tiles should be a spectrum such that certain things increase or decrease the strength ofthe claim/ownership such as marking territory, how often territory is walked through or seen, fights over it, etc.
+		// Shelter that has the strongest ownership to the organism is preferred over those that have less or no ownership to the organism, and unclaimed is prefferred to claimed by another. Balanced by distance such that if the organism cannot reach their home before sleep reaches 0, they choose the best nearest option.
+	if (need == "shelter") {
+		//function
+	}
+		// 
+		//[10]	 sleep = "";
+		// Need level deteriorates over time. If it reaches 0 organism falls asleep then and there. Affected by exhaustion level (need to implement). If it falls below a certain level, organism actively seeks a place to sleep.
+		// Need satisfied by sleeping, sleep environment affects rate of satisfaction (light/sound/danger/getting hit/rain/wind/hard or rough sleep spot/etc). 
+		// Wake up when need level reaches 100 or if another need such as food/water/heat/etc deteriorates to a certain point so that it takes priority over sleep.
+		// Sleep need level affects movement/thinking
+	if (need == "sleep") {
+		//function
+	}
+		// 
+	//Needs_Safety {
+		//[11]	 health = ""; //rest to heal injuries, avoid sickness, avoid bad food/water
+		// Need to implement health system that includes injury/damage and disease/contamination
+		// Damage and being contaminated lowers health need level. If health need level reaches 0, organism dies. Level affects movement/thinking. 
+		// Satisfy need by resting. 
+	if (need == "health") {
+		//function
+	}
+		// 
+		//[12]	 personal_security = ""; //avoid danger, flee danger, fight danger    this comes after physiological such that an individual might risk danger in order to obtain food/water
+		// Items/tiles/organisms have a calculated threat level to an individual organism. If the threat is static such as contaminated food/tile on fire, response is to simply not consume or touch it.
+		// If the threat is an organism then engage in fight/flight/hide/submit behavior according to the situation.
+	if (need == "personal_security") {
+		//function
+	}
+		// 
+		//[13]	 emotional_security = ""; //stress, sadness, etc    animals may be exempt from this other than maybe pets
+		// Unsure how to implement this, this may be redundant with other needs or at least heavily derived from them.
+		// 
+		// 
+		//[14]	 financial_security = ""; //humans only, may make more sense to merge with other needs given that money itself isn't a need but what it gets access to is.
+		// This if implemented will be done far, far later when monetized economies are implemented. For a long time economies will be non-monetary, instead either gift/bartering/subsistence economies. 
+	//Needs_Social {
+		//[15]	 family = ""; //protecting one's children and mate
+		// Depending on context, prioritize helping family, especially one's children, fulfill their needs before one's own.
+		// 
+		//[16]	 friendship = ""; //can include pack/herd behavior		might be redundant with family, such that family and friends are points on a spectrum of caring for another
+		//[17]	 intimacy = ""; //reproduction
+		// If asexual, reproduce if empty tile nearby. (seeds/spores/division)
+		// If sexual, depends on type (monogamous, polygamous exclusive (alpha male), polygamous non exclusive (some fish)) relation types might fit more in family than pure reproduction.
+		// Find available/preferred mate. If necessary attract mate (mating ritual). Mate. Female is now either pregnant or laid eggs which have been or become fertilized. 
+		// New organism is born with some characteristics of both parents. 
+	if (need == "intimacy") {
+		//function
+	}
+		// 
+		//[18]	 trust = "";		implement later
+		//[19]	 acceptance = "";		implement later
+		//[20]	 affection = "";		implement later
+	//Needs_Esteem {
+		//[21]	 social_status = ""; //animals compete in social hierarchy (pack leader/male competition/etc)		implement later
+
+
+
+
+
+
+
 }
 //carry()						pick up or drop item
 //fight()						cause damage to another organism
