@@ -19,6 +19,10 @@ public:
 		vector<int> item_id;
 		string terrain;
 		string terrain_png;
+		bool has_smoke = false;
+		bool has_toxic_gas = false;
+		float temperature = 50;//measured in Celsius because it makes it easier given water freezes at 0 and boils at 100
+		int light_level;//minimum is 0
 	};
 	void setMap();
 	static const int rows = 26;		//y

@@ -20,39 +20,39 @@ Biology::Biology(int a) {
 
 	id_iterator = 0;
 	Organism new_o;
-	new_o = {new_id(5),5,0,0}; //place 1 human
+	new_o = {new_id(5),&species[5],0,0}; //place 1 human
 	insert_o(new_o);
 
 	//instantiate organisms
 	
 	for (int i = 0; i < 20; i++) {//generates about 800 grass tiles
 		for (int j = 0; j < 40; j++) {
-			new_o = { new_id(0), 0, j, i };//grass		grass might make more sense to not update on every global update but instead only a portion does at a time. Another approach to increase efficiency would be to try to conceptualize grass as a single organism and only track its internal and external edges/holes. Or maybe create a fixed number of grass entities (object and pointer) for every state it could be in and use those for various tiles, switching between states as a tile is affected by external factors.
+			new_o = { new_id(0), &species[0], j, i};//grass		grass might make more sense to not update on every global update but instead only a portion does at a time. Another approach to increase efficiency would be to try to conceptualize grass as a single organism and only track its internal and external edges/holes. Or maybe create a fixed number of grass entities (object and pointer) for every state it could be in and use those for various tiles, switching between states as a tile is affected by external factors.
 			insert_o(new_o);
 		}
 	}
 	for(int i=0;i<15;i++){
 		int new_x = rand() % Environment::columns;
 		int new_y = rand() % Environment::rows;
-		new_o = { new_id(1), 1, new_x, new_y };//tree
+		new_o = { new_id(1), &species[1], new_x, new_y };//tree
 		insert_o(new_o);
 	}
 	for(int i=0;i<30;i++){
 		int new_x = rand() % Environment::columns;
 		int new_y = rand() % Environment::rows;
-		new_o = { new_id(2), 2, new_x, new_y };//berrybush
+		new_o = { new_id(2), &species[2], new_x, new_y };//berrybush
 		insert_o(new_o);
 	}
 	for(int i=0;i<4;i++){
 		int new_x = rand() % Environment::columns;
 		int new_y = rand() % Environment::rows;
-		new_o = { new_id(3), 3, new_x, new_y, (bool)(i % 2)};//ensures a 50/50 sex ratio //deer
+		new_o = { new_id(3), &species[3], new_x, new_y, (bool)(i % 2)};//ensures a 50/50 sex ratio //deer
 		insert_o(new_o);
 	}
 	for (int i = 0;i < 4;i++) {
 		int new_x = rand() % Environment::columns;
 		int new_y = rand() % Environment::rows;
-		new_o = { new_id(5), 3, new_x, new_y, (bool)(i % 2)};//ensures a 50/50 sex ratio //human
+		new_o = { new_id(5), &species[5], new_x, new_y, (bool)(i % 2)};//ensures a 50/50 sex ratio //human
 		insert_o(new_o);
 	}
 	
@@ -173,6 +173,13 @@ bool Biology::move_to(Organism* o, int x, int y) {//return true if destination r
 }
 //death()						handles if and when ann organism dies and deterioration of the corpse
 bool Biology::death(Organism* o) {
+	bool air_deprivation_death = o->needs[0].current_level == 0;
+	bool heat_cold_death = o->needs[1].current_level == 0 || o->needs[1].current_level == 100;
+
+
+	if (air_deprivation_death || heat_cold_death) { o->alive = false; }
+
+
 	//if(o.alive==false){decompose corpse}
 	//if(done_decomposing){delete organism object from radix tree}
 	//ex: bool death_condition_1 = a == true || b == false;
@@ -272,7 +279,11 @@ bool Biology::move_to_new_search_space(Organism* o, int search_range) {//called 
 	return reached;
 }
 
-
+void Biology::change_need_level(Organism* o, int need, float amt) {
+	o->needs[need].current_level += amt * o->needs[need].change_rate;
+	if (o->needs[need].current_level > 100) { o->needs[need].current_level = 100; }
+	else if (o->needs[need].current_level < 0) { o->needs[need].current_level = 0; }
+}
 //satisfy_needs()				sorts needs by priority, iterates over all needs attempting to fill them
 void Biology::satisfy_needs(Organism* o) {
 	int top_priority = 0;
@@ -292,76 +303,228 @@ void Biology::satisfy_needs(Organism* o) {
 
 
 
-
+//forgot to break out / return of if statement when executing move_to_new_search_space() which is the fail state for not finding target/path to satisfy need, applies to all need functions.
+//also need to add a return statement for successful finds/reaching target.
+//The triggers for each satisfaction function also aren't properly implemented, it should be both triggered by priority && need[_].current_level
+//every need function also needs a corresponding attribute in the organism struct that controls if the satisfaction/deterioration even executes in the first place and if so, which version given it might have different versions such as subsistence type, plant behavior vs animals, etc.
 
 //Needs to implement right now			Think first in terms of conditional statements, then in functions to be able to check those conditionals.
 	//Needs_Physiological {//all needs start at 100% satisfaction, each species (and sometimes individual) has a different rate of decreasing and increasing each
-		//[0]	 air = "";
-		// if submerged in water, air need_level falls and death occurs when it reaches 0, need_level rises once out of water again. Inverse for fish.
-		// if air has smoke/poison air need_level falls until death at 0 same as submerged underwater. Poison (maybe smoke?) has added damage effects
-		// Requires a way to check if submerged/buried and whether tile has airborne smoke/poison
-		// Satisfy need by moving to nearest source of clean air
-		// Low need causes lung damage? Reduces ability to move/think.
-	if (need == "air") {
-		//function
+		
+/*done-ish*/if (need == "air") {//function essentially reduces to if in x, reduce need level, if need level is below y, get out of x.
+	//[0]	 air = "";
+	// if submerged in water, air need_level falls and death occurs when it reaches 0, need_level rises once out of water again. Inverse for fish.
+	// if air has smoke/poison air need_level falls until death at 0 same as submerged underwater. Poison (maybe smoke?) has added damage effects
+	// Requires a way to check if submerged/buried and whether tile has airborne smoke/poison
+	// Satisfy need by moving to nearest source of clean air
+	// Low need causes lung damage? Reduces ability to move/think.
+		if(o->move_to_breathable_tile){//get out of unbreathable tile to breathable tile
+			return_vars r1 = find(o, "terrain", "all", 10);
+			vector<Environment::Tile> breathable_tiles = r1.r_tile;
+			for (int i = breathable_tiles.size()-1; i > -1; i--) {
+				if (breathable_tiles[i].has_smoke==false || breathable_tiles[i].has_toxic_gas==true) {
+					breathable_tiles.erase(breathable_tiles.begin() + i);
+				}
+				if (breathable_tiles[i].terrain == "deep water" && o->species->breathes_water == false) {
+					breathable_tiles.erase(breathable_tiles.begin() + i);
+				}
+				if ((breathable_tiles[i].terrain != "deep water" || breathable_tiles[i].terrain != "shallow water") && o->species->breathes_air == false) {
+					breathable_tiles.erase(breathable_tiles.begin() + i);
+				}
+			}
+			if (breathable_tiles.size() == 0) { move_to_new_search_space(o,10); }
+			else {
+				move_to(o, breathable_tiles[0].x, breathable_tiles[0].y);
+			}
+		}
 	}
-		//[1]	 heat = ""; //maintain proper temperature hot/cold
-		// if tile or item carried is too hot or too cold, adjust need level according to temperature and take damage at a certain level. 
-		// Unlike other needs, this one is good at level 50, 100 is deadly hot and 0 is deadly cold with corresponding damage types (frozen solid, frostbite, hypothermia, heat stroke, burning, charred, incinerated) and affects ability to move
-		// Satisfy need by moving towards better temperature tiles or dropping hot/cold item. 
-		// Need to implement a temperature system in the environment/items influenced by air/sun/shade/etc.
-	if (need == "heat") {
-		//function
-	}
+/*done-ish*/if (need == "heat") {//similar to air need, simply move to tile with better temperature
+	//[1]	 heat = ""; //maintain proper temperature hot/cold
+	// if tile or item carried is too hot or too cold, adjust need level according to temperature and take damage at a certain level. 
+	// Unlike other needs, this one is good at level 50, 100 is deadly hot and 0 is deadly cold with corresponding damage types (frozen solid, frostbite, hypothermia, heat stroke, burning, charred, incinerated) and affects ability to move
+	// Satisfy need by moving towards better temperature tiles or dropping hot/cold item. 
+	// Need to implement a temperature system in the environment/items influenced by air/sun/shade/etc.
+		if (o->needs[1].current_level > 60) {
+			return_vars r1 = find(o, "terrain", "all", 10);
+			vector<Environment::Tile> better_temperature_tiles = r1.r_tile;
+			float better_temp = Environment::map[o->y][o->x].temperature;
+			int better_index=-1;
+			for (int i = better_temperature_tiles.size() - 1; i > -1; i--) {
+				if (better_temperature_tiles[i].temperature < better_temp) {
+					better_temp = better_temperature_tiles[i].temperature;
+					better_index = i;
+				}
+			}
+			if (better_index==-1) { move_to_new_search_space(o, 10); }
+			else {
+				move_to(o, better_temperature_tiles[better_index].x, better_temperature_tiles[better_index].y);
+			}
+		}
+		else if (o->needs[1].current_level < 40) {
+			return_vars r1 = find(o, "terrain", "all", 10);
+			vector<Environment::Tile> better_temperature_tiles = r1.r_tile;
+			float better_temp = Environment::map[o->y][o->x].temperature;
+			int better_index = -1;
+			for (int i = better_temperature_tiles.size() - 1; i > -1; i--) {
+				if (better_temperature_tiles[i].temperature > better_temp) {
+					better_temp = better_temperature_tiles[i].temperature;
+					better_index = i;
+				}
+			}
+			if (better_index==-1) { move_to_new_search_space(o, 10); }
+			else {
+				move_to(o, better_temperature_tiles[better_index].x, better_temperature_tiles[better_index].y);
+			}
+		}
 
+
+	}
 		//[2]	 clothes = ""; //only applies to humans (and hermit crabs), might make more sense to merge with temperature as clothes is about enduring the environment
 		// Implement this later, requires ability to craft clothes and ingredients to do so, etc. 
-		// 
 		//
 		//[3]	 hygiene = ""; //only applies to humans, maybe cats?
 		// Dirtiness reduces need level and causes morale/discomfort hits (how is this measured and stored?) and increased chances of disease/infection
 		// Need to implement sources and types of dirtiness (dust/dirt/mud/sweat/blood/etc)
-		// 
-		// 
-		//[4]	 light = ""; //especially important for plants
-		// Need to implement a light (and therefore also shade) system in the environment for tiles, have organisms move to tiles with more light. Light level adjusts need level.
-		// If need level is 0 then the organism is blind and moves blindly until it gets to better lighting. Low light causes mood hit (how to measure/store this?)
-		// A plant with lower light level grows slower and if the level is too low it begins to take damage (wilt) and die
-	if (need == "light") {
-		//function
+/*done-ish*/if (need == "light") {//can tolerate being in bad light for a while, moves to better lighting after that while or if blinded by light level (too dark/too bright)
+	//[4]	 light = ""; //especially important for plants
+	// Need to implement a light (and therefore also shade) system in the environment for tiles, have organisms move to tiles with more light. Light level adjusts need level.
+	// If need level is 0 then the organism is blind and moves blindly until it gets to better lighting. Low light causes mood hit (how to measure/store this?)
+	// A plant with lower light level grows slower and if the level is too low it begins to take damage (wilt) and die
+		//need to add an option to create light, such as with fire/torch/lamp/etc rather if one can rather than moving to a better lighting.
+	//need a way to differentiate between if an organism can move or if it can't, differentiation between organism immobility and species immobility as well. This applies to all functions.
+	//in a way, a plant does "move" towards light by growing in the direction of more light.
+	if (o->needs[4].current_level<50 || o->too_dark_bright==true) {//unsure what light level numbers actually mean yet. If the difference between the ideal light level is too high, then move to a better light level. (too dark or too bright = blindness/lowered sight)
+			return_vars r1 = find(o, "terrain", "all", 10);
+			vector<Environment::Tile> better_light_tiles = r1.r_tile;
+			float better_light = abs(Environment::map[o->y][o->x].light_level - o->species->ideal_light_level);
+			int better_index = -1;
+			for (int i = better_light_tiles.size() - 1; i > -1; i--) {
+				if (abs(better_light_tiles[i].light_level- o->species->ideal_light_level) < better_light) {
+					better_light = abs(better_light_tiles[i].light_level - o->species->ideal_light_level);
+					better_index = i;
+				}
+			}
+			if (better_index == -1) { move_to_new_search_space(o, 10); }
+			else {
+				move_to(o, better_light_tiles[better_index].x, better_light_tiles[better_index].y);
+			}
+		}
+	}		
+/*done-ish*/if (need == "water") {
+	//[5]	 water = "";
+	// Need to implement water system later on as well as containers for water like pots/cups/waterskins. 
+	// Need level deteriorates over time, with deterioration rate influenced by heat
+	// Satisfy need by finding nearest water source and consuming it
+	// Plants get their water need satisfied by growing out roots into surrounding tiles in preference towards tiles that contain more water. Dirt tiles can hold water.
+	// These tiles get their water level replenished by either surrounding water over time or rain. 
+	if (o->needs[5].current_level < 60) {
+		return_vars r1 = find(o, "terrain", "shallow water", 10);
+		return_vars r2 = find(o, "terrain", "deep water", 10);//can simplify and therefore remove these by passing an array of strings to the find() function such that one can search for multiple terrain types, etc. Likewise for diet.
+		bool reached;
+		if (r1.r_tile.size() == 0 && r2.r_tile.size() == 0) { move_to_new_search_space(o, 10); }
+		else if (r1.r_tile.size() == 0) { reached = move_to(o, r2.r_tile[0].x, r2.r_tile[0].y); }
+		else if (r2.r_tile.size() == 0) { reached = move_to(o, r1.r_tile[0].x, r1.r_tile[0].y); }
+		else {
+			int d1 = o->x - r1.r_tile[0].x;
+			int d2 = o->y - r1.r_tile[0].y;
+			int d3 = o->x - r2.r_tile[0].x;
+			int d4 = o->y - r2.r_tile[0].y;
+			if (abs(d1) + abs(d2) <= abs(d3) + abs(d4)) { reached = move_to(o, r1.r_tile[0].x, r1.r_tile[0].y); }//if shallow water is closer, go to it, else go to deeper water
+			else {
+				reached = move_to(o, r2.r_tile[0].x, r2.r_tile[0].y);
+			}
+			if (reached) { change_need_level(o, 5, 100); }//if reached water, drink and fill all water. Currently haven't implemented a draining of source for smaller sources like puddes/containers/etc. Even larger sources eventually should drain. 
+		}
 	}
-		// 
-		//[5]	 water = "";
-		// Need to implement water system later on as well as containers for water like pots/cups/waterskins. 
-		// Need level deteriorates over time, with deterioration rate influenced by heat
-		// Satisfy need by finding nearest water source and consuming it
-		// Plants get their water need satisfied by growing out roots into surrounding tiles in preference towards tiles that contain more water. Dirt tiles can hold water.
-		// These tiles get their water level replenished by either surrounding water over time or rain. 
-	if (need == "water") {
-		//function
-	}
-		// 
+}
+/*done-ish*/if (need == "urination") {//uses o_it[1]		need to add an external reset for if function is interrupted/does not finish/etc  same for all functions that use an external iterator
 		//[6]	 urination = "";
 		// Need is inversely proportional to water need, as in if hydrated need to piss, else no. If need reaches 0, piss. Need deteriorates periodically. 
 		// Satisfied by taking a piss which resets need level to 100. Pissing adds piss, a type of contaminated water, to tile.
-	if (need == "urination") {
-		//function
+		bool reached = false;
+		if (o->needs[6].current_level < 30 ) {//move to spot to urinate
+			//for now, simply move 10 tiles away and urinate there, then move back to original position
+			if (o->o_it[1][0] == 0) { 
+				o->o_it[1][0] = 1; 
+				o->o_it[1][1] = o->x;
+				o->o_it[1][2] = o->y;
+			}//init function
+			if (!out_of_bounds(o->o_it[1][1] + 10, o->o_it[1][2])) { reached=move_to(o, o->o_it[1][1] + 10, o->o_it[1][2]); }
+			else if (!out_of_bounds(o->o_it[1][1] - 10, o->o_it[1][2])) { reached = move_to(o, o->o_it[1][1] - 10, o->o_it[1][2]); }
+			if (reached) {
+				o->o_it[1][0] = 0;//reset iterator
+				o->needs[6].current_level = 100;//reset need
+				Environment::map[o->y][o->x].item_id.push_back(1);//for now, an item id of 1 is piss, all piss shares this id. Later on, liquids should be treated as a different object rather than just an item so that they both behave and integrate with a complete water cycle system.
+				//need to add a way to delete piss after a period of time, otherwise it will endlessley accumulate.
+			}
+		}
+		if (o->needs[6].current_level == 0) {//if 0, force urinate
+			o->o_it[1][0] = 0;//reset iterator
+			o->needs[6].current_level = 100;//reset need
+			Environment::map[o->y][o->x].item_id.push_back(1);
+		}
 	}
-		// 
-		//[7]	 food = ""; //soil nutrients for plants
+/*almost done-ish*/if (need == "food") {//currently simply chooses nearest edible organism, later add a way to pick so that a hunting omnivore doesn't stop to pick berries in the middle of a hunt.
+	//[7]	 food = ""; //soil nutrients for plants
 		// Need level deteriorates over time, satisfy need by consuming food that matches organism's diet, obtain food through corresponding subsistence methods
 		// Food is either an organism or an item, contains calories which fill up according to need level change rate, 
 		// If need level reaches 0, die of starvation. Later add a calorie in / calorie out system to control fat/skinny levels. Then a nutrition system for malnourishment.
 		// Plants get their food need satisfied the same way they get water, by growing roots towards dirt tiles with higher soil fertility/nutrition levels. These tiles level are replenished by decomposing corpses and decomposing excrement.
-	if (need == "food") {
-		//function
-	}
-		// 
-		//[8]	 excretion = "";
+		if (o->needs[7].current_level < 50) {
+			return_vars nearby_food = find(o, "species", o->species->diet, 10);//need to include food items not just food organisms
+			if (nearby_food.r_organism.size() == 0) { move_to_new_search_space(o, 10); }
+			if (nearby_food.r_organism[0]->species->species_name == "grass" || nearby_food.r_organism[0]->species->species_name == "berrybush") {//could also just combine all strings and check if string1 is a substring of the longer string2		makes more sense to have a "plant/animals" attribute			need to implement a utility function that checks if string x is or isn't equal to one of many strings
+				//if plant, gather/forage/graze
+				if (o->species->subsistence_method[0] == "gather") {//move to target, consume target
+					bool reached = move_to(o, nearby_food.r_organism[0]->x, nearby_food.r_organism[0]->y);
+					if (reached) {
+						change_need_level(o, 7, nearby_food.r_organism[0]->species->calories);//currently consumes entire food organism, need to implement partial consumption, this will necessitate moving calories from species to organism struct
+						delete_o(nearby_food.r_organism[0]); //need to implement a function to delete the organism from the radix tree and then later handle deleting from organisms vector
+					}
+				}
+			}
+			else if (nearby_food.r_organism[0]->species->species_name == "deer") {
+				//if animal, hunt by: ambush, persistance, pack, solo, trap, lure
+				if (o->species->subsistence_method[1] == "hunt") {//currently is simply persistence chase prey until prey is exhausted or overrun, then attack prey until dead, then consume
+					bool reached = move_to(o, nearby_food.r_organism[0]->x, nearby_food.r_organism[0]->y);//need to implement walk/run choice, species speed, and species and organism exhaustion/stamina					
+					if (reached) {
+						attack(o, nearby_food.r_organism[0], "basic melee"); //need to implement an attack function, attack(attacker, target, attack method); Also requires implementing health, damage, etc.
+						if (nearby_food.r_organism[0]->alive == false) {
+							change_need_level(o, 7, nearby_food.r_organism[0]->species->calories);//currently consumes entire food organism, need to implement partial consumption, this will necessitate moving calories from species to organism struct
+							delete_o(nearby_food.r_organism[0]); //need to implement a function to delete the organism from the radix tree and then later handle deleting from organisms vector
+						}
+					}
+				}
+			}
+		}
+	}	
+/*done-ish*/if (need == "excretion") {//niether this nor the urination function will actually move back both because its not implemented but also becuase it won't trigger once need is satisfied other than the first step back
+	//[8]	 excretion = "";
 		// Need is inversly proportional to food need, so if food need level is high, excretion level deteriorates over time. If level hits 0, take a shit. This creates a shit item in the tile which decomposes over time until it dissappears, increasing soil nutrition as it does. 
 		// While the shit item is still present, it has a chance to infect nearby organisms with a disease. If it is contact with water either as a water tile or held in the soil, the water becomes contaminated water.
-	if (need == "excretion") {
-		//function
+	//currently the same as urination but with item id of "2" and tied to food instead of water need level
+		bool reached = false;
+		if (o->needs[8].current_level < 30) {//move to spot to shit
+			//for now, simply move 10 tiles away and shit there, then move back to original position
+			if (o->o_it[1][0] == 0) {
+				o->o_it[1][0] = 1;
+				o->o_it[1][1] = o->x;
+				o->o_it[1][2] = o->y;
+			}//init function
+			if (!out_of_bounds(o->o_it[1][1] + 10, o->o_it[1][2])) { reached = move_to(o, o->o_it[1][1] + 10, o->o_it[1][2]); }
+			else if (!out_of_bounds(o->o_it[1][1] - 10, o->o_it[1][2])) { reached = move_to(o, o->o_it[1][1] - 10, o->o_it[1][2]); }
+			if (reached) {
+				o->o_it[1][0] = 0;//reset iterator
+				o->needs[8].current_level = 100;//reset need
+				Environment::map[o->y][o->x].item_id.push_back(2);//for now, an item id of 2 is shit, all shit shares this id. Later on, shit should be treated as a type of corpse or other thing that decomposes rather than just an item so that it slowly dissapears and refills local soil/water with nutrients for plants/filter feeders. Also needs to be a biohazard that can cause infections nearby.
+				//need to add a way to delete piss after a period of time, otherwise it will endlessley accumulate.
+			}
+		}
+		if (o->needs[8].current_level == 0) {//if 0, force shit
+			o->o_it[1][0] = 0;//reset iterator
+			o->needs[8].current_level = 100;//reset need
+			Environment::map[o->y][o->x].item_id.push_back(2);
+		}
 	}
 		// 
 		//[9]	 shelter = ""; //applies only to animals that live in caves, nests, etc
@@ -374,13 +537,20 @@ void Biology::satisfy_needs(Organism* o) {
 		//function
 	}
 		// 
-		//[10]	 sleep = "";
+
+/*not done*/if (need == "sleep") {
+	//[10]	 sleep = "";
 		// Need level deteriorates over time. If it reaches 0 organism falls asleep then and there. Affected by exhaustion level (need to implement). If it falls below a certain level, organism actively seeks a place to sleep.
 		// Need satisfied by sleeping, sleep environment affects rate of satisfaction (light/sound/danger/getting hit/rain/wind/hard or rough sleep spot/etc). 
 		// Wake up when need level reaches 100 or if another need such as food/water/heat/etc deteriorates to a certain point so that it takes priority over sleep.
 		// Sleep need level affects movement/thinking
-	if (need == "sleep") {
-		//function
+		if (o->needs[10].current_level == 0) {//if it hits 0, this should take top priority in needs as it is forced sleep and sleep satisfies need
+			o->awake = false;
+			change_need_level(o, 10, 1);
+		}
+		else if (o->needs[10].current_level < 30) {//if sleep level is low, search for adequate sleep spot
+			//need to implement a sleep spot identification method
+		}
 	}
 		// 
 	//Needs_Safety {
@@ -435,8 +605,64 @@ void Biology::satisfy_needs(Organism* o) {
 //carry()						pick up or drop item
 //fight()						cause damage to another organism
 //periodic()					all periodic changes such as need deterioration should be here
-void Biology::periodic(Organism* o) {
+void Biology::periodic(Organism* o) {//might make more sense to just call this function need_deterioration
+	//air need deterioration. Deteriorates over time depending on the breathability of the tile currently on.
+	//"deep water" is used until a proper z axis is implemented, "shallow water" is currently breathable by air breathers as it assumes their head is above water
+	bool is_drowning = o->species->breathes_air = true && o->species->breathes_water == false && Environment::map[o->y][o->x].terrain == "deep water";
+	bool fish_out_of_water = o->species->breathes_air = false && o->species->breathes_water == true && Environment::map[o->y][o->x].terrain != "deep water" && Environment::map[o->y][o->x].terrain != "shallow water";
+	bool is_suffocating = false; //need to implement, not sure how. Check if organism is buried, but exempt burrowing animals? What about damaged lungs?
+	bool in_smoke = Environment::map[o->y][o->x].has_smoke == true;
+	bool in_poison_gas = Environment::map[o->y][o->x].has_toxic_gas == true;
+	if (is_drowning || fish_out_of_water || is_suffocating || in_smoke || in_poison_gas) {//makes more sense to restructure this to only check what's relevant rather than check all conditionals
+		if (o->needs[0].current_level < 50) { o->move_to_breathable_tile = true; }//can tolerate being in unbreathable tile for a certain amount of time, until need level falls below 50
+		change_need_level(o, 0, -1);//reduce air need level, 0=death				need to separate need deterioration and checks from attempt to satisfy need
+	}
+	else {
+		o->move_to_breathable_tile = false;
+		change_need_level(o, 0, 1);//if in breathable tile, increase need level
+	}
 
+
+
+	//heat need change
+	float diff_temp = Environment::map[o->y][o->x].temperature - o->temperature;
+	o->temperature += 0.2 * diff_temp;//increases/decreases organism temp by 20% of difference. So that hotter/colder tiles heat/cool organism faster but the organism never overshoots the tile temperature.
+	//unsure whether to add the same to the tile, so a hot organism can heat up a tile, etc
+	change_need_level(o, 1, 0.2 * diff_temp);
+	bool combust = o->temperature > 200;//this should apply to corpses too
+	bool burn = o->temperature > 150;//skin burn, no ignition
+	bool heatstroke = o->temperature > 100;
+	bool hypothermia = o->temperature < 20;
+	bool frostbite = o->temperature < 0;
+	bool freeze = o->temperature < -20;
+	if(combust){}//need to implement
+	else if(burn){}
+	else if(heatstroke){}
+	else if(freeze){}
+	else if (frostbite) {}
+	else if (hypothermia) {}
+
+	//light need change
+	int diff_light = Environment::map[o->y][o->x].light_level - o->species->ideal_light_level;
+	if (diff_light > 50) { o->too_dark_bright = true; }
+	else if (diff_light > 10) { o->too_dark_bright = false; change_need_level(o,4,-1); }
+	else{ o->too_dark_bright = false; change_need_level(o, 4, 1); }
+
+
+	//water need change
+	change_need_level(o, 5, -1);
+
+	//urination need change
+	if (o->needs[5].current_level > 50) { change_need_level(o,6,-1); }//if water need level above 50, decrease urination need level (low level means have to urinate)
+
+	//food need change
+	change_need_level(o, 7, -1);
+
+	//defecation need change
+	if (o->needs[7].current_level > 50) { change_need_level(o, 8, -1); }//if food need level above 50, decrease defecation need level (low level means have to shit)
+
+	//sleep need change
+	change_need_level(o, 10, -1);
 }
 //context()						a listener that checks the organism"s state and immediate surroundings to respond to things like taking damage or the appearance of a threat
 void Biology::context(Organism* o) {

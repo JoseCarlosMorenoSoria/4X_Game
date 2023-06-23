@@ -32,6 +32,9 @@ public:
 		//string biome = "";
 		//string composed_of = ""; //meat, plant, wood, bone
 		//string species_physical_traits = "";//the physical variability of the species, for example humans vary in skin tone, dogs in fur coats, etc. This holds the names of traits that can vary.
+		bool breathes_air;
+		bool breathes_water;
+		int ideal_light_level;//nocturnal animals prefer darkness
 	};
 
 /*
@@ -49,12 +52,12 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 
 	static const int number_of_species = 6;
 	Species species[number_of_species] = {
-	{0, "grass", 10, "asexual_spores",{},"","",0.6},
+	{0, "grass", 10, "asexual_spores",{},"","",0.6, false, {}, true, false},//all these bools are going to get confusing, need some way to use strings and translate to and from bools and ints
 	{1, "tree"},
-	{2, "berrybush", 40, "asexual_spores",{},"","",0.6}, //reproduction method is temporarily spores, should be seeds?
-	{3, "deer", 100,"sexual_animal", {"gather"}, "find_water", "mobile", 2, true, {"grass"}},
+	{2, "berrybush", 40, "asexual_spores",{},"","",0.6, false, {}, true, false}, //reproduction method is temporarily spores, should be seeds?
+	{3, "deer", 100,"sexual_animal", {"gather"}, "find_water", "mobile", 2, true, {"grass"}, true, false, 50},
 	{4, "wolf" },
-	{5, "human", 100,"sexual_animal", {"gather","hunt"}, "find_water", "mobile", 2, true, {"berrybush","deer"}} //initially, a human is sort of like a more complex wolf
+	{5, "human", 100,"sexual_animal", {"gather","hunt"}, "find_water", "mobile", 2, true, {"berrybush","deer"}, true, false, 50} //initially, a human is sort of like a more complex wolf
 	};
 
 
@@ -128,7 +131,8 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 	static int id_iterator;
 	struct Organism {
 		int organism_id;
-		int species_id;
+		//int species_id;
+		Species* species;
 		int x;
 		int y;
 		//int pos_z = -1; //of limited use, for birds, underwater, etc. 
@@ -137,6 +141,9 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 		//string individual_physical_traits; //May be best implemented as an additional struct or array of strings that correspond to different variability. Corresponding to the species_physical_traits, holds the exact variation an individual has, such as the exact skin color, max height, hair color, etc.
 
 		//these are never set when creating a new organism, should always start at default values
+		float temperature = 50;//measured in Celsius because it makes it easier given water freezes at 0 and boils at 100. Need to limit the number of decimal places.
+		bool move_to_breathable_tile = false;
+		bool too_dark_bright = false;
 		bool can_move = true;
 		bool awake = true; //true=awake, false=asleep
 		bool alive = true;
@@ -146,7 +153,7 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 		Need needs[35];
 		int o_it[2][5] = {//external iterator for functions
 			{0,0,0,0,0},//[0] move_to_new_search_space()
-			{0,0,0,0,0}
+			{0,0,0,0,0}//[1] satisfy_need : urination function
 		};
 	};
 	static vector<Organism> organisms;//never erase or rearrange objects here or else it will invalidate the pointers in the radix tree. Only erase when saving/quiting game and then immediately reinsert entire vector into the radix tree from the o_root.
@@ -204,7 +211,7 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 	void update_all();
 	void insert_o(Organism o);	//insert organism into radix tree
 	bool move_to_new_search_space(Organism* o, int search_range);//problem with this function is that it's a random direction, needs a way to remember where it has already searched. Use Steering Behavior?
-
+	void change_need_level(Organism* o, int need, float amt);//needed to bound need level within 0 and 100
 	//idle()
 	
 	//the goal is to have very few and very simple functions which can be combined to create more complex behavior without introducing new bugs
@@ -245,7 +252,7 @@ struct Position { //expand this later into a vector, as in include direction and
 
 
 
-
+//swimming is an action limited by stamina / exhaustion, need to implement
 
 
 
