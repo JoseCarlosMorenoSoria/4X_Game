@@ -4,10 +4,10 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
-//it's possible that pointers now work correctly and should be used instead of id and pass by value. Will use id and pass by value for now but change later.
-
-//it's better to have fixed structures rather than looping to fnd x, for example when getting species by id, it'd be better if the id was an index of the array
+//it's better to have fixed structures rather than looping to find x, for example when getting species by id, it'd be better if the id was an index of the array
+// likewise maybe lookup tables might be more efficient
 //better than that is simply encoding info in smaller data packets such as an int/bit sequence
 
 using namespace std;
@@ -17,24 +17,26 @@ public:
 	Biology();//empty default constructor to prevent unintended initialization
 	Biology(int a);
 
-	struct Species {
+	struct Species {//later on, restructure Species as sets of ranges rather than hard values so as to allow individual variability in things such as health pool, damage strength, skin/fur colors, etc.
 		int species_id;
 		string species_name; //also used as species relevant portion of filepath for png. ex: human, deer, tree
 		int calories; //move to organism struct later given organisms grow and therefore their calories should increase, species should contain a calorie range according to age/size/etc
 		string reproduction_method = "";
-		string subsistence_method[5];//gather, hunt_ambush, soil, filter, hunt_pack, etc
+		vector<string> subsistence_method;//gather, hunt_ambush, soil, filter, hunt_pack, etc
 		string hydration_method = "";
 		string mobility = "";
 		float max_lifespan = -1; //measured in years
 		bool needs_sleep = false;
 		//string diet_type = ""; //decomposer, producer, vegetarian, omnivore, carnivore
-		string diet[2];
+		vector<string> diet;
 		//string biome = "";
 		//string composed_of = ""; //meat, plant, wood, bone
 		//string species_physical_traits = "";//the physical variability of the species, for example humans vary in skin tone, dogs in fur coats, etc. This holds the names of traits that can vary.
 		bool breathes_air;
 		bool breathes_water;
 		int ideal_light_level;//nocturnal animals prefer darkness
+		float ideal_temperature;
+		int damage;//amount of damage species can deal. 
 	};
 
 /*
@@ -48,8 +50,6 @@ Species bacteria_decomposing = {"bacteria_decomposing", "decomposer", "corpse, w
 Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush_hunting", "woodland", "meat, bone"}; //initially, a human is sort of like a more complex wolf
 */
 
-
-
 	static const int number_of_species = 6;
 	Species species[number_of_species] = {
 	{0, "grass", 10, "asexual_spores",{},"","",0.6, false, {}, true, false},//all these bools are going to get confusing, need some way to use strings and translate to and from bools and ints
@@ -59,7 +59,6 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 	{4, "wolf" },
 	{5, "human", 100,"sexual_animal", {"gather","hunt"}, "find_water", "mobile", 2, true, {"berrybush","deer"}, true, false, 50} //initially, a human is sort of like a more complex wolf
 	};
-
 
 	struct Need {//35 needs total. Physiological: 10 needs. Safety: 4 needs. Social: 6 needs. Esteem: 2 needs. Cognitive: 4 needs. Aesthetics: 3 needs. 
 		string need_name;
@@ -142,7 +141,6 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 
 		//these are never set when creating a new organism, should always start at default values
 		float temperature = 50;//measured in Celsius because it makes it easier given water freezes at 0 and boils at 100. Need to limit the number of decimal places.
-		bool move_to_breathable_tile = false;
 		bool too_dark_bright = false;
 		bool can_move = true;
 		bool awake = true; //true=awake, false=asleep
@@ -151,9 +149,11 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 		string png_file_state="";//contains state portion of png file for organism. ex: sleep, dead. Default = ""		should be derived at render time from all attributes rather than kept as a state
 		bool deleted = false; //used to track which organisms have been deleted so as not to erase from vector which can invalidate pointers.
 		Need needs[35];
-		int o_it[2][5] = {//external iterator for functions
+		int o_it[4][5] = {//external iterator for functions
 			{0,0,0,0,0},//[0] move_to_new_search_space()
-			{0,0,0,0,0}//[1] satisfy_need : urination function
+			{0,0,0,0,0},//[1] satisfy_need : urination function
+			{0,0,0,0,0},//[2] death()
+			{0,0,0,0,0}//[3] satisfy_need : excretion function
 		};
 	};
 	static vector<Organism> organisms;//never erase or rearrange objects here or else it will invalidate the pointers in the radix tree. Only erase when saving/quiting game and then immediately reinsert entire vector into the radix tree from the o_root.
@@ -185,42 +185,37 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 	};
 
 	int new_id(int species_id);
-	//simple move function
-	bool move_to(Organism* o, int x, int y);
-	//handles if and when ann organism dies and deterioration of the corpse
-	bool death(Organism* o);
-	//create new organism, allows options for specific contexts
-	void birth(Organism* mother, Organism* father);
-	//general search function
-	return_vars find(Organism* o, string target_type, string target, int search_radius);
-	//sorts needs by priority, iterates over all needs attempting to fill them
-	void satisfy_needs(Organism* o); //includes consume, sleep, and change_need_level functions
+	bool move_to(Organism* o, int x, int y);//simple move function
+	void death(Organism* o);//handles if and when an organism dies and deterioration of the corpse
+	void birth(Organism* mother, Organism* father);//create new organism, allows options for specific contexts
+	return_vars find(Organism* o, string target_type, vector<string> targets, int search_radius);//general search function
+	bool find(vector<string> v, string s);//a wrapper for the std::find() function to make it cleaner. Only implemented for strings for now.	
 	//carry()						pick up or drop item
 	//fight()						cause damage to another organism
-	//all periodic changes such as need deterioration should be here as well as aging
-	void periodic(Organism* o);
-	//a listener that checks the organism"s state and immediate surroundings to respond to things like taking damage or the appearance of a threat
-	void context(Organism* o);
-	//returns organism
-	Organism* get_by_id(int id);
-	//gets corresponding species, used to avoid holding a copy per organism without using pointers
-	Species get_species(int species_id);
-	//check if out of bounds, true if yes, false if no
-	bool out_of_bounds(int x, int y);
+	void periodic(Organism* o);//all periodic changes such as need deterioration should be here as well as aging
+	void context(Organism* o);//a listener that checks the organism"s state and immediate surroundings to respond to things like taking damage or the appearance of a threat
+	Organism* get_by_id(int id);//returns organism
+	bool out_of_bounds(int x, int y);//check if out of bounds, true if yes, false if no
 	void update(Organism* o);
 	void update_all();
 	void insert_o(Organism o);	//insert organism into radix tree
 	bool move_to_new_search_space(Organism* o, int search_range);//problem with this function is that it's a random direction, needs a way to remember where it has already searched. Use Steering Behavior?
 	void change_need_level(Organism* o, int need, float amt);//needed to bound need level within 0 and 100
 	//idle()
+	void attack(Organism* o, Organism* target, string attack_method);//should this be replaced with a general combat function for both attack and defense? Currently no defense function implemented.
+	void delete_o(Organism* o);//removes organism from radix tree, also need to implement a function to remove deleted objects from organisms vector and then reinsert into tree and reset all pointers
+	int distance(int x1, int y1, int x2, int y2);//gets distance between 2 tiles on map.
+
+	//these 3 functions operate as: sort needs by priority*utility, find path to satisfy, execute path
+	string calculate_top_need(Organism* o);//returns name of most urgent*low cost need to execute next.
+	int satisfy_needs(Organism* o, int search_radius, int need, bool execute); //sorts needs by priority, iterates over all needs attempting to fill them  //if execute==false, returns distance to target cost (int) if path to need satisfaction found, returns search_radius+1 else (therefore must move_to_new_search_space())
 	
-	//the goal is to have very few and very simple functions which can be combined to create more complex behavior without introducing new bugs
+	//add consume, sleep
 
 
 
 
-
-};
+};//the goal is to have very few and very simple functions which can be combined to create more complex behavior without introducing new bugs
 
 
 #endif
@@ -256,3 +251,26 @@ struct Position { //expand this later into a vector, as in include direction and
 
 
 
+	//implement these later
+		//[13]	 emotional_security = ""; //stress, sadness, etc    animals may be exempt from this other than maybe pets
+		// Unsure how to implement this, this may be redundant with other needs or at least heavily derived from them.
+		// 
+		// 
+		//[14]	 financial_security = ""; //humans only, may make more sense to merge with other needs given that money itself isn't a need but what it gets access to is.
+		// This if implemented will be done far, far later when monetized economies are implemented. For a long time economies will be non-monetary, instead either gift/bartering/subsistence economies. 
+		//[15]	 family = ""; //protecting one's children and mate
+		// Depending on context, prioritize helping family, especially one's children, fulfill their needs before one's own.
+		// 
+		//[16]	 friendship = ""; //can include pack/herd behavior		might be redundant with family, such that family and friends are points on a spectrum of caring for another
+	//[2]	 clothes = ""; //only applies to humans (and hermit crabs), might make more sense to merge with temperature as clothes is about enduring the environment
+	// Implement this later, requires ability to craft clothes and ingredients to do so, etc. 
+	//
+	//[3]	 hygiene = ""; //only applies to humans, maybe cats?
+	// Dirtiness reduces need level and causes morale/discomfort hits (how is this measured and stored?) and increased chances of disease/infection
+	// Need to implement sources and types of dirtiness (dust/dirt/mud/sweat/blood/etc) 
+		// 
+		//[18]	 trust = "";		implement later
+		//[19]	 acceptance = "";		implement later
+		//[20]	 affection = "";		implement later
+	//Needs_Esteem {
+		//[21]	 social_status = ""; //animals compete in social hierarchy (pack leader/male competition/etc)		implement later
