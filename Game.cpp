@@ -64,6 +64,7 @@ void Game::update() {
 	if (daytime < 96) { daytime++; }
 	else { daytime = 0; days_passed++; cout << days_passed << " days passed" << endl; }
 
+	environment.update();
 	biology.update_all();
 
 }

@@ -17,28 +17,6 @@ public:
 	Biology();//empty default constructor to prevent unintended initialization
 	Biology(int a);
 
-	struct Species {//later on, restructure Species as sets of ranges rather than hard values so as to allow individual variability in things such as health pool, damage strength, skin/fur colors, etc.
-		int species_id;
-		string species_name; //also used as species relevant portion of filepath for png. ex: human, deer, tree
-		int calories; //move to organism struct later given organisms grow and therefore their calories should increase, species should contain a calorie range according to age/size/etc
-		string reproduction_method = "";
-		vector<string> subsistence_method;//gather, hunt_ambush, soil, filter, hunt_pack, etc
-		string hydration_method = "";
-		string mobility = "";
-		float max_lifespan = -1; //measured in years
-		bool needs_sleep = false;
-		//string diet_type = ""; //decomposer, producer, vegetarian, omnivore, carnivore
-		vector<string> diet;
-		//string biome = "";
-		//string composed_of = ""; //meat, plant, wood, bone
-		//string species_physical_traits = "";//the physical variability of the species, for example humans vary in skin tone, dogs in fur coats, etc. This holds the names of traits that can vary.
-		bool breathes_air;
-		bool breathes_water;
-		int ideal_light_level;//nocturnal animals prefer darkness
-		float ideal_temperature;
-		int damage;//amount of damage species can deal. 
-	};
-
 /*
 //create constructors that allow setting various attributes at once according to types, ex: wolf is a mammal, therefore composed_of = "meat, bone" so initialize wolf as mammal by wolf=mammal(wolf) where mammal() takes wolf to set its composed_of value and returns updated wolf, then wolf = {.species{"wolf"}, .biome{"woodland"}};
 //might make more sense to divide Species struct into more structs to reduce redundant data, such as simply having Species.kingdom="mammal" and Mammal.composed_of="meat, bone" rather than having various copies of composed_of by wolf=mammal(wolf)
@@ -49,15 +27,43 @@ Species tree = {"tree", "producer", "sunlight", "woodland", "plant, wood"};
 Species bacteria_decomposing = {"bacteria_decomposing", "decomposer", "corpse, waste", "woodland"}; //is a "species" because it completes the abiotic decomposition process, otherwise you get mummies such as in deserts. Might make more sense to just have this be an environmental process, though decomposers also include fungi, parasites, and certain bugs such as flies. Waste is nutrients returned to soil/water
 Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush_hunting", "woodland", "meat, bone"}; //initially, a human is sort of like a more complex wolf
 */
+	struct Species {//later on, restructure Species as sets of ranges rather than hard values so as to allow individual variability in things such as health pool, damage strength, skin/fur colors, etc.
+		int species_id;
+		string species_name; //also used as species relevant portion of filepath for png. ex: human, deer, tree
+		bool is_plant; //if plant, then true, else false		covers: is immobile, doesn't sleep, etc
+		int calories; //move to organism struct later given organisms grow and therefore their calories should increase, species should contain a calorie range according to age/size/etc
+		string reproduction_method = "";
+		vector<string> subsistence_method;//gather, hunt_ambush, soil, filter, hunt_pack, tracking_hunter, etc
+		float max_lifespan = -1; //measured in years
+		//string diet_type = ""; //decomposer, producer, vegetarian, omnivore, carnivore
+		vector<string> diet;
+		//string biome = "";
+		//string composed_of = ""; //meat, plant, wood, bone
+		//string species_physical_traits = "";//the physical variability of the species, for example humans vary in skin tone, dogs in fur coats, etc. This holds the names of traits that can vary.
+		string breathes; //air, water, amphibious
+		int ideal_light_level;//nocturnal animals prefer darkness
+		float ideal_temperature;
+		int damage;//amount of damage species can deal. 
+		vector<string> instinctual_threats;//innate/instinctually known threats (species)
+	};
 
-	static const int number_of_species = 6;
+//these are the variables to set per species, placed here for ease of reference
+//{species_id; species_name; is_plant; calories; reproduction_method; subsistence_method; max_lifespan; diet; breathes; ideal_light_level; ideal_temperature; damage;}
+
+//
+//to do now: 
+// Implement shelter, sleep, reproduction and aging. 
+//then test
+//
+
+	static const int number_of_species = 6;//grass eaten by deer eaten by wolf and human	berrybush eaten by human		tree cut down for wood by human
 	Species species[number_of_species] = {
-	{0, "grass", 10, "asexual_spores",{},"","",0.6, false, {}, true, false},//all these bools are going to get confusing, need some way to use strings and translate to and from bools and ints
+	{0, "grass", true, 10, "asexual_spores",{"roots"},0.6, {}, "air", 50, 50,0},
 	{1, "tree"},
-	{2, "berrybush", 40, "asexual_spores",{},"","",0.6, false, {}, true, false}, //reproduction method is temporarily spores, should be seeds?
-	{3, "deer", 100,"sexual_animal", {"gather"}, "find_water", "mobile", 2, true, {"grass"}, true, false, 50},
-	{4, "wolf" },
-	{5, "human", 100,"sexual_animal", {"gather","hunt"}, "find_water", "mobile", 2, true, {"berrybush","deer"}, true, false, 50} //initially, a human is sort of like a more complex wolf
+	{2, "berrybush", true, 40, "asexual_spores",{"roots"},0.6, {}, "air", 50, 50,0}, //reproduction method is temporarily spores, should be seeds?
+	{3, "deer", false, 100,"sexual_animal", {"gather"}, 2, {"grass"}, "air", 50, 50,0,{"wolf"}},
+	{4, "wolf", false, 100,"sexual_animal", {"gather","hunt"}, 2, {"berrybush","deer"}, "air", 50, 50,34},
+	{5, "human", false, 100,"sexual_animal", {"gather","hunt"}, 2, {"berrybush","deer"}, "air", 50, 50,34} //initially, a human is sort of like a more complex wolf
 	};
 
 	struct Need {//35 needs total. Physiological: 10 needs. Safety: 4 needs. Social: 6 needs. Esteem: 2 needs. Cognitive: 4 needs. Aesthetics: 3 needs. 
@@ -139,21 +145,28 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 		//int weight = -1; //determines calories/material when dead and impact momentum/carryability when alive
 		//string individual_physical_traits; //May be best implemented as an additional struct or array of strings that correspond to different variability. Corresponding to the species_physical_traits, holds the exact variation an individual has, such as the exact skin color, max height, hair color, etc.
 
+		//strength
+		//speed
+		//awareness range (for search radius, later replace with a sight cone and hearing radius/cones)
+
 		//these are never set when creating a new organism, should always start at default values
+		vector<string> learned_threats;//stores known threats (species), learned by seeing another organism of the same species be attacked. 
 		float temperature = 50;//measured in Celsius because it makes it easier given water freezes at 0 and boils at 100. Need to limit the number of decimal places.
 		bool too_dark_bright = false;
 		bool can_move = true;
 		bool awake = true; //true=awake, false=asleep
 		bool alive = true;
-		float age = 0;//measured in years
+		//float age = 0;//measured in years		need to implement
 		string png_file_state="";//contains state portion of png file for organism. ex: sleep, dead. Default = ""		should be derived at render time from all attributes rather than kept as a state
 		bool deleted = false; //used to track which organisms have been deleted so as not to erase from vector which can invalidate pointers.
 		Need needs[35];
-		int o_it[4][5] = {//external iterator for functions
+		int o_it[6][5] = {//external iterator for functions		ahould this be a single reusable iterator??
 			{0,0,0,0,0},//[0] move_to_new_search_space()
 			{0,0,0,0,0},//[1] satisfy_need : urination function
 			{0,0,0,0,0},//[2] death()
-			{0,0,0,0,0}//[3] satisfy_need : excretion function
+			{0,0,0,0,0},//[3] satisfy_need : excretion function
+			{0,0,0,0,0},
+			{0,0,0,0,0}
 		};
 	};
 	static vector<Organism> organisms;//never erase or rearrange objects here or else it will invalidate the pointers in the radix tree. Only erase when saving/quiting game and then immediately reinsert entire vector into the radix tree from the o_root.
@@ -187,7 +200,7 @@ Species human = {"human", "omnivore", "pack_hunting, persistance_hunting, ambush
 	int new_id(int species_id);
 	bool move_to(Organism* o, int x, int y);//simple move function
 	void death(Organism* o);//handles if and when an organism dies and deterioration of the corpse
-	void birth(Organism* mother, Organism* father);//create new organism, allows options for specific contexts
+	void birth(Organism* mother, Organism* father, int x, int y);//create new organism at sepcific location, allows options for specific contexts
 	return_vars find(Organism* o, string target_type, vector<string> targets, int search_radius);//general search function
 	bool find(vector<string> v, string s);//a wrapper for the std::find() function to make it cleaner. Only implemented for strings for now.	
 	//carry()						pick up or drop item
